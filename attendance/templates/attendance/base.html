@@ -1,0 +1,131 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naura Secondary Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="favicon" href="{% static 'assets/img/nauraicon.svg' %}" type="image/svg+xml">
+    <style>
+        /* NDI Hero Banner Styling */
+.ndi-hero {
+    position: relative;
+    height: 350px; /* Standard height for Desktop */
+    width: 100%;
+    overflow: hidden;
+    background-color: #000; /* Fallback color */
+}
+
+.ndi-hero-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* This is the "Magic" - keeps proportions perfect */
+    object-position: center 20%; /* Adjusts focus to the top/middle where faces usually are */
+    opacity: 0.6; /* Dims the image so white text is easy to read */
+    transition: transform 0.5s ease;
+}
+
+.ndi-overlay-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    width: 90%;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    .ndi-hero {
+        height: 250px; /* Shorter on phones so buttons are visible sooner */
+    }
+    .ndi-overlay-text h1 {
+        font-size: 1.8rem; /* Smaller text for small screens */
+    }
+}
+
+/* Full-screen loader overlay */
+#loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease-out, visibility 0.5s;
+}
+
+/* The Pulsing SVG Icon */
+.loader-icon {
+    width: 100px; /* Adjust size as needed */
+    height: auto;
+    animation: pulse-glow 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+    0% {
+        transform: scale(0.9);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+        filter: drop-shadow(0 0 10px rgba(0, 123, 255, 0.5)); /* Optional glow */
+    }
+    100% {
+        transform: scale(0.9);
+        opacity: 0.7;
+    }
+}
+
+/* Class to hide loader after page loads */
+.loader-hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+</style>
+</head>
+<body class="bg-light">
+    
+<div id="loader">
+    <img src="{% static 'assets/img/nauraicon.svg' %}" alt="Naura Icon" class="loader-icon">
+</div>
+    <nav class="navbar navbar-dark bg-primary shadow-sm mb-4">
+        <div class="ndi-hero mb-5 shadow-sm">
+            <img src="{% static 'assets/img/naura.jpg' %}" class="ndi-hero-img" alt="Naura Students">
+            <div class="ndi-overlay-text text-white">
+                <h1 class="fw-bold text-uppercase tracking-tight">Naura Digital Initiative</h1>
+                <div class="badge bg-primary mb-2">NDI System v1.0</div>
+                <p class="lead d-none d-md-block">Empowering Teachers, Shaping the Future of Naura Secondary</p>
+            </div>
+        </div>
+        
+        <div class="container">
+            </div>
+    </nav>
+
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+    <script>
+        window.addEventListener("load", function() {
+            const loader = document.getElementById("loader");
+            loader.classList.add("loader-hidden");
+            
+            // Optional: Remove from DOM after transition to keep the page light
+            setTimeout(() => {
+                loader.style.display = "none";
+            }, 500);
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

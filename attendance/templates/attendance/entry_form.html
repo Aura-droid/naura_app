@@ -1,0 +1,250 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Attendance Entry | Naura</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <link rel="favicon" href="{% static 'assets/img/nauraicon.svg' %}" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0 mb-4" role="alert">
+                        <i class="bi bi-check-circle-fill me-2"></i> {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            <div class="container mt-3">
+                <a href="{% url 'teacher_hub' %}" class="btn btn-outline-secondary btn-sm shadow-sm mb-3">
+                    <i class="bi bi-arrow-left-circle me-1"></i> Back to Hub
+                </a>
+            </div>
+            {% if submitted_today %}
+    <div class="alert alert-warning border-warning shadow-sm mb-4">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Note:</strong> Attendance has already been recorded today for: 
+        <span class="fw-bold">{{ submitted_today|join:", " }}</span>.
+        <br>
+        <small>If you submit for these classes again, the previous data will be updated.</small>
+    </div>
+{% endif %}
+            <div class="card shadow border-0">
+                <div class="card-header bg-primary text-white p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0"><i class="bi bi-pencil-square"></i> Daily Attendance Entry</h3>
+                        {% if user.is_staff %}
+                        <a href="{% url 'master_dashboard' %}" class="btn btn-light btn-sm text-primary fw-bold">
+                            <i class="bi bi-speedometer2"></i> Back to Dashboard
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <form method="POST" id="attendanceForm">
+                        {% csrf_token %}
+
+                        {% if form.errors %}
+                            <div class="alert alert-danger shadow-sm">
+                                <strong class="d-block mb-1"><i class="bi bi-exclamation-octagon"></i> Please fix the following:</strong>
+                                <small>{{ form.non_field_errors }}</small>
+                                <ul class="mb-0 mt-2 small">
+                                    {% for field in form %}
+                                        {% if field.errors %}
+                                            <li><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <label class="fw-bold mb-2">Select Class</label>
+                                
+                                {{ form.school_class }} 
+                                
+                                <div class="form-text mt-1">Example: FORM 1 A, FORM 2 B</div>
+                            </div>
+                            
+                            
+                        </div>
+
+                        <hr class="text-muted mb-4">
+
+                        <div class="row g-4">
+                            <div class="col-md-6 border-end">
+                                <h5 class="text-primary mb-3"><i class="bi bi-calculator"></i> Student Counts</h5>
+                                
+                                <div class="row g-3 mb-4 p-3 bg-white rounded border">
+                                    <div class="col-12"><h6 class="text-muted small text-uppercase fw-bold">Class Register (Official Total)</h6></div>
+                                    <div class="col-6">
+                                        <label class="form-label small fw-bold">Boys Registered</label>
+                                        {{ form.total_boys_registered }}
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small fw-bold">Girls Registered</label>
+                                        {{ form.total_girls_registered }}
+                                    </div>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <label class="small fw-bold">Present Boys</label>
+                                        {{ form.present_boys }}
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="small fw-bold">Present Girls</label>
+                                        {{ form.present_girls }}
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="small fw-bold text-info">Permitted Boys</label>
+                                        {{ form.permitted_boys }}
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="small fw-bold text-info">Permitted Girls</label>
+                                        {{ form.permitted_girls }}
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="small fw-bold text-danger">Truant Boys (Auto)</label>
+                                        {{ form.truant_boys }}
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="small fw-bold text-danger">Truant Girls (Auto)</label>
+                                        {{ form.truant_girls }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <h5 class="text-danger mb-3"><i class="bi bi-person-lines-fill"></i> Absence Details</h5>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label small fw-bold text-danger">Truant Names (No Permission)</label>
+                                    {{ form.truant_names }}
+                                    <div class="form-text">Separate names with commas.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-info">Permitted Names (With Permission)</label>
+                                    {{ form.permitted_names }}
+                                    <div class="form-text">Separate names with commas.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-5">
+                            <button type="button" id="submitModalTrigger" class="btn btn-primary btn-lg shadow-sm">
+                                <i class="bi bi-cloud-arrow-up-fill"></i> Submit Class Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-shield-check"></i> Final Confirmation</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="fs-5">Submit attendance for <br><strong id="modalClassName" class="text-primary text-uppercase"></strong>?</p>
+                <div class="p-3 bg-light rounded text-start small">
+                    <p class="mb-1 text-muted"><strong>Reminder:</strong></p>
+                    <p class="mb-0 text-muted">Double-check that your Present + Permitted + Truant counts equal the Registered total.</p>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-3">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Go Back</button>
+                <button type="button" id="finalSubmitBtn" class="btn btn-primary px-5">Confirm & Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('attendanceForm');
+    const trigger = document.getElementById('submitModalTrigger');
+    const finalSubmit = document.getElementById('finalSubmitBtn');
+    const modalElement = document.getElementById('confirmModal');
+    const bootstrapModal = new bootstrap.Modal(modalElement);
+
+    // 1. Math Logic (Auto-Calculations)
+    form.addEventListener('input', function() {
+        const calculate = (gender) => {
+            let reg = parseInt(document.querySelector(`[name="total_${gender}_registered"]`).value) || 0;
+            let pres = parseInt(document.querySelector(`[name="present_${gender}"]`).value) || 0;
+            let perm = parseInt(document.querySelector(`[name="permitted_${gender}"]`).value) || 0;
+            let truantField = document.querySelector(`[name="truant_${gender}"]`);
+            if(truantField) {
+                truantField.value = Math.max(0, reg - (pres + perm));
+            }
+        };
+        calculate('boys');
+        calculate('girls');
+    });
+
+    // 2. Styled Confirmation Logic
+    trigger.addEventListener('click', function() {
+        const className = document.querySelector('[name="school_class"]').value;
+        if (!className) {
+            alert("Please select or enter a Class name first.");
+            return;
+        }
+        document.getElementById('modalClassName').innerText = className;
+        bootstrapModal.show();
+    });
+
+    // 3. Final Submit
+    finalSubmit.addEventListener('click', function() {
+        this.disabled = true; // Prevent double-clicks
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Submitting...';
+        form.submit();
+    });
+});
+</script>
+<script>
+    // Initialize Tom Select on your input
+    new TomSelect("#class-select", {
+        persist: false,
+        createOnBlur: true,
+        create: true,
+        // These are the "options" it will pull from your database
+        options: [
+            {% for class_name in existing_classes %}
+                {value: "{{ class_name }}", text: "{{ class_name }}"},
+            {% endfor %}
+        ],
+        // Basic styling to make it look like a clean dropdown
+        render: {
+            option: function(data, escape) {
+                return '<div class="py-2 px-3">' + escape(data.text) + '</div>';
+            },
+            item: function(data, escape) {
+                return '<div>' + escape(data.text) + '</div>';
+            }
+        }
+    });
+</script>
+
+
+</body>
+</html>
