@@ -1,33 +1,51 @@
 import os
 import re
+import csv
 from datetime import timedelta
-from io import BytesIO
 import ssl
 import httpx
+from datetime import datetime
+from .utils import send_staff_reminder
+from .models import NotificationLog
 
 # --- AI & Environment ---
 from google import genai 
 from dotenv import load_dotenv
 
 # --- Django Core ---
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
-from django.db.models import Sum, Avg, F, ExpressionWrapper, FloatField, Q
+from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, Q, Sum
 from django.utils import timezone
-from django.http import HttpResponse
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.template.loader import get_template
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.db.models.functions import Upper, TruncMonth
 from django.core.cache import cache
 from django.contrib.auth.models import User
 from django.db import models
+from django.conf import settings
 
 # --- PDF Generation ---
 from xhtml2pdf import pisa
 
 # --- Project Models & Forms ---
-from .models import AttendanceRecord, DailyTODReport
-from .forms import AttendanceForm, TODReportForm
+from .excel_utils import build_export_workbook, export_filename_for_template
+from .forms import (
+    AttendanceForm,
+    ResultEntryBulkForm,
+    ResultTemplateForm,
+    ResultTemplateStatusForm,
+    TODReportForm,
+)
+from .models import (
+    AttendanceRecord,
+    DailyTODReport,
+    ResultEntry,
+    ResultTemplate,
+    ResultTemplateStatus,
+    ResultTemplateSubject,
+)
 
 load_dotenv()
 
@@ -37,9 +55,85 @@ def is_management(user):
     """Checks if the user belongs to the Management group or is a Superuser."""
     return user.is_authenticated and (user.is_superuser or user.groups.filter(name='Management').exists())
 
+def is_academic_office(user):
+    """Checks if the user belongs to the Academic Office group or is a Superuser."""
+    return user.is_authenticated and (user.is_superuser or user.groups.filter(name='Academic Office').exists())
+
+def is_results_office(user):
+    """Checks if the user can manage academic result templates."""
+    return user.is_authenticated and (
+        user.is_superuser
+        or user.groups.filter(name__in=['Management', 'Academic Office']).exists()
+    )
+
 def is_teacher_or_mgmt(user):
     """Checks if the user is a Teacher, Management, or Superuser."""
     return user.is_authenticated and (user.is_superuser or user.groups.filter(name__in=['Teachers', 'Management']).exists())
+
+
+def build_subject_progress_rows(template):
+    total_students = template.students.count()
+    entry_queryset = ResultEntry.objects.filter(template=template).select_related('submitted_by', 'subject')
+    entry_summary = {
+        row['subject_id']: row
+        for row in (
+            entry_queryset.values('subject_id')
+            .annotate(
+                entered_count=Count('id', filter=~Q(raw_score='')),
+                final_count=Count('id', filter=Q(is_final=True)),
+            )
+        )
+    }
+    latest_entries = {}
+    for entry in entry_queryset.order_by('subject_id', '-updated_at'):
+        latest_entries.setdefault(entry.subject_id, entry)
+
+    subject_rows = []
+    for subject in template.subjects.all():
+        summary = entry_summary.get(subject.id, {})
+        entered_count = summary.get('entered_count', 0)
+        final_count = summary.get('final_count', 0)
+        latest_entry = latest_entries.get(subject.id)
+
+        if total_students and final_count >= total_students:
+            status_label = "Submitted"
+            status_class = "success"
+        elif entered_count > 0:
+            status_label = "In Progress"
+            status_class = "warning"
+        else:
+            status_label = "Pending"
+            status_class = "danger"
+
+        subject_rows.append(
+            {
+                'subject': subject,
+                'entered_count': entered_count,
+                'final_count': final_count,
+                'total_students': total_students,
+                'status_label': status_label,
+                'status_class': status_class,
+                'pending_count': max(total_students - final_count, 0),
+                'latest_updated_at': latest_entry.updated_at if latest_entry else None,
+                'latest_updated_by': (
+                    latest_entry.submitted_by.get_full_name() or latest_entry.submitted_by.username
+                )
+                if latest_entry and latest_entry.submitted_by
+                else "",
+            }
+        )
+
+    return subject_rows
+
+
+def filter_subject_rows(subject_rows, status_filter):
+    if status_filter == 'pending':
+        return [row for row in subject_rows if row['status_label'] == 'Pending']
+    if status_filter == 'in_progress':
+        return [row for row in subject_rows if row['status_label'] == 'In Progress']
+    if status_filter == 'submitted':
+        return [row for row in subject_rows if row['status_label'] == 'Submitted']
+    return subject_rows
 
 # --- HELPER: AI INSIGHTS ---
 
@@ -87,6 +181,9 @@ def login_success_redirect(request):
     
     if request.user.is_superuser or 'Management' in user_groups:
         return redirect('master_dashboard')
+
+    elif 'Academic Office' in user_groups:
+        return redirect('result_template_dashboard')
     
     elif 'Teachers' in user_groups:
         return redirect('teacher_hub')
@@ -97,14 +194,182 @@ def login_success_redirect(request):
             <h1>Group Mismatch Error</h1>
             <p><strong>User:</strong> {request.user.username}</p>
             <p><strong>Groups found in database:</strong> {user_groups}</p>
-            <p><strong>Required:</strong> 'Teachers' or 'Management' (Case-Sensitive!)</p>
+            <p><strong>Required:</strong> 'Teachers', 'Academic Office', or 'Management' (Case-Sensitive!)</p>
             <a href="/admin/">Go to Admin to fix Groups</a>
         """)
 
 @login_required
 def teacher_hub(request):
     """Landing page for teachers to choose between Attendance or TOD tasks."""
-    return render(request, 'attendance/teacher_hub.html')
+    open_templates = (
+        ResultTemplate.objects.filter(status=ResultTemplateStatus.OPEN)
+        .prefetch_related('subjects')
+        .order_by('-created_at')
+    )
+    pending_templates = []
+    for template in open_templates:
+        subject_rows = build_subject_progress_rows(template)
+        pending_count = sum(1 for row in subject_rows if row['status_label'] != 'Submitted')
+        if pending_count:
+            pending_templates.append({'template': template, 'pending_count': pending_count})
+    return render(
+        request,
+        'attendance/teacher_hub.html',
+        {
+            'open_result_templates': open_templates,
+            'pending_result_templates': pending_templates,
+        },
+    )
+
+
+@user_passes_test(is_teacher_or_mgmt)
+def teacher_result_hub(request):
+    status_filter = request.GET.get('status', 'all')
+    templates = (
+        ResultTemplate.objects.filter(status=ResultTemplateStatus.OPEN)
+        .prefetch_related('subjects')
+        .order_by('-created_at')
+    )
+    template_rows = []
+    for template in templates:
+        all_subject_rows = build_subject_progress_rows(template)
+        subject_rows = filter_subject_rows(all_subject_rows, status_filter)
+        pending_subjects = sum(1 for row in all_subject_rows if row['status_label'] != 'Submitted')
+        if status_filter != 'all' and not subject_rows:
+            continue
+        template_rows.append(
+            {
+                'template': template,
+                'subject_rows': subject_rows,
+                'pending_subjects': pending_subjects,
+            }
+        )
+    return render(
+        request,
+        'attendance/result_teacher_hub.html',
+        {
+            'template_rows': template_rows,
+            'status_filter': status_filter,
+        },
+    )
+
+
+@user_passes_test(is_teacher_or_mgmt)
+def teacher_result_entry(request, template_id, subject_id):
+    template = get_object_or_404(
+        ResultTemplate.objects.prefetch_related('students', 'subjects'),
+        pk=template_id,
+    )
+    subject = get_object_or_404(ResultTemplateSubject, pk=subject_id, template=template)
+    students = list(template.students.all())
+    existing_entries = {
+        entry.student_id: entry
+        for entry in ResultEntry.objects.filter(template=template, subject=subject).select_related('student')
+    }
+    can_edit = template.can_edit
+    subject_progress = next(
+        (row for row in build_subject_progress_rows(template) if row['subject'].id == subject.id),
+        None,
+    )
+
+    if request.method == 'POST':
+        form = ResultEntryBulkForm(request.POST)
+        if not can_edit:
+            messages.error(request, "This template is closed. You can no longer edit the submitted marks.")
+            return redirect('teacher_result_entry', template_id=template.id, subject_id=subject.id)
+
+        if form.is_valid():
+            submit_mode = form.cleaned_data['submit_mode']
+            now = timezone.now()
+            for student in students:
+                score = (request.POST.get(f'score_{student.id}', '') or '').strip().upper()
+                defaults = {
+                    'raw_score': score,
+                    'submitted_by': request.user,
+                    'is_final': submit_mode == 'final',
+                }
+                if submit_mode == 'final':
+                    defaults['submitted_at'] = now
+
+                ResultEntry.objects.update_or_create(
+                    template=template,
+                    subject=subject,
+                    student=student,
+                    defaults=defaults,
+                )
+
+            success_message = "Marks submitted successfully." if submit_mode == 'final' else "Draft saved successfully."
+            messages.success(request, success_message)
+            return redirect('teacher_result_entry', template_id=template.id, subject_id=subject.id)
+        messages.error(request, "Please correct the invalid marks and try again.")
+    else:
+        form = ResultEntryBulkForm(initial={'submit_mode': 'draft'})
+
+    rows = []
+    for student in students:
+        entry = existing_entries.get(student.id)
+        rows.append(
+            {
+                'student': student,
+                'score': entry.raw_score if entry else '',
+                'is_final': entry.is_final if entry else False,
+            }
+        )
+
+    context = {
+        'template': template,
+        'subject': subject,
+        'rows': rows,
+        'form': form,
+        'can_edit': can_edit,
+        'subject_progress': subject_progress,
+    }
+    return render(request, 'attendance/result_entry_form.html', context)
+
+
+@user_passes_test(is_teacher_or_mgmt)
+def autosave_result_entry(request, template_id, subject_id):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST required.'}, status=405)
+
+    template = get_object_or_404(ResultTemplate.objects.prefetch_related('students'), pk=template_id)
+    subject = get_object_or_404(ResultTemplateSubject, pk=subject_id, template=template)
+    if not template.can_edit:
+        return JsonResponse({'ok': False, 'error': 'This template is closed.'}, status=400)
+
+    scores = request.POST
+    now = timezone.now()
+    for student in template.students.all():
+        field_name = f'score_{student.id}'
+        if field_name not in scores:
+            continue
+        score = (scores.get(field_name, '') or '').strip().upper()
+        ResultEntry.objects.update_or_create(
+            template=template,
+            subject=subject,
+            student=student,
+            defaults={
+                'raw_score': score,
+                'submitted_by': request.user,
+                'is_final': False,
+                'submitted_at': None,
+            },
+        )
+
+    progress = next(
+        (row for row in build_subject_progress_rows(template) if row['subject'].id == subject.id),
+        None,
+    )
+    return JsonResponse(
+        {
+            'ok': True,
+            'saved_at': now.strftime('%H:%M'),
+            'entered_count': progress['entered_count'] if progress else 0,
+            'final_count': progress['final_count'] if progress else 0,
+            'pending_count': progress['pending_count'] if progress else 0,
+            'status_label': progress['status_label'] if progress else 'Pending',
+        }
+    )
 
 # --- DATA ENTRY VIEWS ---
 
@@ -143,7 +408,7 @@ def take_attendance(request):
     
     return render(request, 'attendance/entry_form.html', context)
 
-@user_passes_test(is_teacher_or_mgmt)
+
 @user_passes_test(is_teacher_or_mgmt)
 def submit_tod_report(request):
     """
@@ -189,6 +454,16 @@ def master_dashboard(request):
     """Main oversight dashboard for Headmaster / Management."""
     date_str = request.GET.get('search_date') or request.GET.get('date')
     today = timezone.datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else timezone.now().date()
+    current_hour = datetime.now().hour
+    
+    # Check if it's 11:00 AM or later (Tanzania time is UTC+3)
+    # If your server is on UTC, 11:00 AM EAT is 08:00 AM UTC.
+    if current_hour >= 8: 
+        log, created = NotificationLog.objects.get_or_create(date=today)
+        if not log.sent:
+            send_staff_reminder("You are reminded to submit your attendence and/or T.O.D reports to N.D.I if you have not done so.")
+            log.sent = True
+            log.save()
     
     latest_report = DailyTODReport.objects.filter(date=today).first()
     recent_reports = DailyTODReport.objects.order_by('-date')[:5]
@@ -246,6 +521,13 @@ def master_dashboard(request):
 
     prev_day = today - timedelta(days=1)
     next_day = today + timedelta(days=1)
+    result_templates = (
+        ResultTemplate.objects.annotate(
+            subject_count=Count('subjects', distinct=True),
+            submission_count=Count('entries', distinct=True),
+        )
+        .order_by('-created_at')[:5]
+    )
 
     context = {
         'records': records,
@@ -262,10 +544,150 @@ def master_dashboard(request):
         'prev_day': prev_day,
         'next_day': next_day,
         'active_staff': active_staff,
+        'result_templates': result_templates,
     }
     return render(request, 'attendance/dashboard.html', context)
 
+
+@user_passes_test(is_results_office)
+def result_template_dashboard(request):
+    if request.method == 'POST':
+        form = ResultTemplateForm(request.POST, request.FILES)
+        if form.is_valid():
+            template = form.save(commit=False)
+            template.uploaded_by = request.user
+            template.status = ResultTemplateStatus.OPEN
+            template.opened_at = timezone.now()
+            template.save()
+            try:
+                template.rebuild_structure()
+            except Exception as exc:
+                template.processing_error = str(exc)
+                template.save(update_fields=['processing_error', 'updated_at'])
+                messages.error(request, f"Template uploaded, but parsing failed: {exc}")
+            else:
+                messages.success(request, "Template uploaded and prepared successfully.")
+            return redirect('result_template_dashboard')
+    else:
+        form = ResultTemplateForm()
+
+    templates = (
+        ResultTemplate.objects.annotate(
+            subject_count=Count('subjects', distinct=True),
+            student_count=Count('students', distinct=True),
+            entry_count=Count('entries', distinct=True),
+        )
+        .order_by('-created_at')
+    )
+    template_rows = []
+    for template in templates:
+        subject_rows = build_subject_progress_rows(template)
+        pending_subjects = sum(1 for row in subject_rows if row['status_label'] != 'Submitted')
+        submitted_subjects = sum(1 for row in subject_rows if row['status_label'] == 'Submitted')
+        template_rows.append(
+            {
+                'template': template,
+                'pending_subjects': pending_subjects,
+                'submitted_subjects': submitted_subjects,
+            }
+        )
+    return render(
+        request,
+        'attendance/result_template_dashboard.html',
+        {
+            'form': form,
+            'template_rows': template_rows,
+            'pending_template_rows': [row for row in template_rows if row['pending_subjects']],
+        },
+    )
+
+
+@user_passes_test(is_results_office)
+def result_template_detail(request, template_id):
+    template = get_object_or_404(
+        ResultTemplate.objects.prefetch_related('subjects', 'students'),
+        pk=template_id,
+    )
+    status_filter = request.GET.get('status', 'all')
+    all_subject_rows = build_subject_progress_rows(template)
+    subject_rows = filter_subject_rows(all_subject_rows, status_filter)
+
+    status_form = ResultTemplateStatusForm(initial={'status': template.status})
+    return render(
+        request,
+        'attendance/result_template_detail.html',
+        {
+            'template': template,
+            'subject_rows': subject_rows,
+            'status_form': status_form,
+            'status_filter': status_filter,
+            'all_subject_rows': all_subject_rows,
+        },
+    )
+
+
+@user_passes_test(is_results_office)
+def update_result_template_status(request, template_id):
+    template = get_object_or_404(ResultTemplate, pk=template_id)
+    if request.method != 'POST':
+        return redirect('result_template_detail', template_id=template.id)
+
+    form = ResultTemplateStatusForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Could not update template status.")
+        return redirect('result_template_detail', template_id=template.id)
+
+    template.status = form.cleaned_data['status']
+    now = timezone.now()
+    if template.status == ResultTemplateStatus.OPEN:
+        template.opened_at = now
+    elif template.status in {ResultTemplateStatus.CLOSED, ResultTemplateStatus.WITHDRAWN}:
+        template.closed_at = now
+    template.save(update_fields=['status', 'opened_at', 'closed_at', 'updated_at'])
+    messages.success(request, f"Template status changed to {template.get_status_display()}.")
+    return redirect('result_template_detail', template_id=template.id)
+
+
+@user_passes_test(is_results_office)
+def export_result_template_excel(request, template_id):
+    template = get_object_or_404(ResultTemplate, pk=template_id)
+    workbook_stream = build_export_workbook(template)
+    return FileResponse(
+        workbook_stream,
+        as_attachment=True,
+        filename=export_filename_for_template(template),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+
+
+@user_passes_test(is_results_office)
+def export_missing_submissions_report(request, template_id):
+    template = get_object_or_404(ResultTemplate, pk=template_id)
+    subject_rows = [row for row in build_subject_progress_rows(template) if row['status_label'] != 'Submitted']
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="missing_submissions_{template.id}.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Template', 'Subject', 'Status', 'Final Submitted', 'Total Students', 'Pending', 'Last Updated By', 'Last Updated At'])
+
+    for row in subject_rows:
+        writer.writerow(
+            [
+                template.name,
+                row['subject'].name,
+                row['status_label'],
+                row['final_count'],
+                row['total_students'],
+                row['pending_count'],
+                row['latest_updated_by'],
+                row['latest_updated_at'].strftime('%Y-%m-%d %H:%M') if row['latest_updated_at'] else '',
+            ]
+        )
+
+    return response
+
 # --- EXPORTS (MANAGEMENT ONLY) ---
+
 
 @user_passes_test(is_management)
 def export_attendance_pdf(request):
@@ -273,19 +695,46 @@ def export_attendance_pdf(request):
     today = timezone.datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else timezone.now().date()
     records = AttendanceRecord.objects.filter(date=today).order_by('school_class')
     
+    # Use the same logo path logic you fixed earlier
+    logo_path = os.path.join(settings.BASE_DIR, 'static', 'assets', 'img', 'nauraicon2.jpg')
+    
     grand_total = records.aggregate(
         rb=Sum('total_boys_registered'), rg=Sum('total_girls_registered'),
         b=Sum('present_boys'), g=Sum('present_girls'),
         pb=Sum('permitted_boys'), pg=Sum('permitted_girls'),
         tb=Sum('truant_boys'), tg=Sum('truant_girls')
     )
+    
+    # Clean up None values
     for key in grand_total:
         if grand_total[key] is None: grand_total[key] = 0
 
-    context = {'records': records, 'grand_total': grand_total, 'today': today, 'school_name': 'Naura Secondary School'}
+    # --- CALCULATE PERCENTAGES ---
+    total_registered = grand_total['rb'] + grand_total['rg']
+    total_present = grand_total['b'] + grand_total['g']
+    total_truant = grand_total['tb'] + grand_total['tg']
+
+    if total_registered > 0:
+        school_attendance_pct = (total_present / total_registered) * 100
+        school_truancy_pct = (total_truant / total_registered) * 100
+    else:
+        school_attendance_pct = 0
+        school_truancy_pct = 0
+
+    context = {
+        'records': records, 
+        'grand_total': grand_total, 
+        'today': today, 
+        'school_name': 'Naura Secondary School', 
+        'logo_path': logo_path,
+        'school_attendance_pct': round(school_attendance_pct, 1), # Rounding for a clean PDF look
+        'school_truancy_pct': round(school_truancy_pct, 1),
+        'user': request.user, # Pass the user to the template for footer info
+    }
+
     template = get_template('attendance/pdf_template.html')
     html = template.render(context)
-    
+
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="Attendance_Report_{today}.pdf"'
     
@@ -295,7 +744,8 @@ def export_attendance_pdf(request):
 @user_passes_test(is_management)
 def export_tod_pdf(request, report_id):
     report = DailyTODReport.objects.get(id=report_id)
-    context = {'report': report, 'school_name': 'Naura Secondary School'}
+    logo_path = os.path.join(settings.BASE_DIR, 'static', 'assets', 'img', 'nauraicon2.jpg')
+    context = {'report': report, 'school_name': 'Naura Secondary School', 'logo_path': logo_path, 'user': request.user}
     html = get_template('attendance/pdf_template2.html').render(context)
     
     response = HttpResponse(content_type='application/pdf')
@@ -311,8 +761,9 @@ def export_weekly_tod_summary(request):
     start = active_date - timedelta(days=active_date.weekday())
     end = start + timedelta(days=6)
     reports = DailyTODReport.objects.filter(date__range=[start, end]).order_by('date')
+    logo_path = os.path.join(settings.BASE_DIR, 'static', 'assets', 'img', 'nauraicon2.jpg')
     
-    context = {'reports': reports, 'start_date': start, 'end_date': end, 'school_name': 'NAURA SECONDARY'}
+    context = {'reports': reports, 'start_date': start, 'end_date': end, 'school_name': 'NAURA SECONDARY', 'logo_path': logo_path, 'user': request.user}
     html = get_template('attendance/weekly_summary_pdf.html').render(context)
     
     response = HttpResponse(content_type='application/pdf')
@@ -348,12 +799,15 @@ def export_weekly_truants_pdf(request):
         })
 
     report_data = sorted(report_data, key=lambda x: (x['class'], x['name']))
+    logo_path = os.path.join(settings.BASE_DIR, 'static', 'assets', 'img', 'nauraicon2.jpg')
 
     context = {
         'report_data': report_data,
         'start_date': start_date,
         'end_date': today,
-        'title': "WEEKLY TRUANCY SUMMARY"
+        'title': "WEEKLY TRUANCY SUMMARY",
+        'logo_path': logo_path,
+        'user': request.user
     }
 
     from django.template.loader import render_to_string

@@ -7,11 +7,27 @@
     <title>Master Dashboard | Naura Secondary</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="favicon" href="{% static 'assets/img/nauraicon.svg' %}" type="image/svg+xml">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="icon" href="{% static 'assets/img/nauraicon.jpg' %}" type="image/jpeg">
 </head>
 <body class="bg-light">
 
 <div class="container mt-4 pb-5">
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <div class="fw-bold text-dark">Portal Navigation</div>
+                <div class="small text-muted">Jump between the main work areas and dashboard sections.</div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'teacher_hub' %}" class="btn btn-outline-primary btn-sm rounded-pill">Teacher Hub</a>
+                <a href="{% url 'result_template_dashboard' %}" class="btn btn-outline-warning btn-sm rounded-pill">Academic Office</a>
+                <a href="#overview-section" class="btn btn-outline-dark btn-sm rounded-pill">Overview</a>
+                <a href="#operations-section" class="btn btn-outline-dark btn-sm rounded-pill">Operations</a>
+                <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm rounded-pill">Logout</a>
+            </div>
+        </div>
+    </div>
     <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 shadow-sm rounded">
         <div>
             <h2 class="mb-0 text-primary fw-bold">Master Attendance Report Naura Secondary</h2>
@@ -59,7 +75,7 @@
         </div>
     </div>
 
-    <div class="summary-box">
+    <div class="summary-box" id="overview-section">
         <table class="summary-table">
             <tr>
                 <td>
@@ -209,8 +225,9 @@
                                 <span class="text-dark">{{ record.truant_names }}</span>
                             </div>
                             <div class="mb-4">
-                                <button onclick="shareOnWhatsApp()" class="btn btn-success shadow-sm w-100 fw-bold">
-                                    <i class="bi bi-whatsapp me-2"></i> Share Daily Truant List to Staff Group
+                                <button onclick="shareOnWhatsApp()" class="btn btn-success shadow-sm w-100 fw-bold d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-whatsapp me-2" style="font-size: 1.2rem;"></i> 
+                                    Share Daily Truant List to Staff Group
                                 </button>
                             </div>
                             <div class="mb-3">
@@ -250,7 +267,7 @@
         </div>
     </div>
 
-<div class="row mt-4 g-4">
+<div class="row mt-4 g-4" id="operations-section">
     <div class="col-md-7">
         <div class="card shadow-sm border-0 h-100 overflow-hidden">
             <div style="height: 4px; background: #0d6efd;"></div>
@@ -358,6 +375,17 @@
                 </a>
             </div>
             <div class="col-12">
+                <a href="{% url 'result_template_dashboard' %}" class="text-decoration-none card border-0 shadow-sm bg-white p-3 action-tile border-start border-warning border-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 fw-bold text-dark">Academic Templates</h6>
+                            <small class="text-muted">Upload result sheets, control submission windows, and export Excel.</small>
+                        </div>
+                        <i class="bi bi-journal-check fs-3 text-warning"></i>
+                    </div>
+                </a>
+            </div>
+            <div class="col-12">
                 <div class="card border-0 bg-light p-3 border-dashed">
                     <small class="text-muted italic"><i class="bi bi-info-circle me-1"></i> Use these tools to manage 24/7 support workflows.</small>
                 </div>
@@ -365,6 +393,38 @@
         </div>
     </div>
 </div>
+
+{% if result_templates %}
+<div class="card shadow-sm border-0 mt-4">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-journal-text me-2 text-warning"></i>Recent Academic Templates</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Subjects</th>
+                        <th>Entries</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for template in result_templates %}
+                    <tr>
+                        <td>{{ template.name }}</td>
+                        <td>{{ template.get_status_display }}</td>
+                        <td>{{ template.subject_count }}</td>
+                        <td>{{ template.submission_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <style>
     .action-tile { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
@@ -518,23 +578,28 @@ new Chart(monthlyCtx, {
 
 function shareOnWhatsApp() {
     let today = "{{ today|date:'d/m/Y' }}";
-    let message = "*NDI DAILY TRUANCY REPORT - " + today + "*\n\n";
+    let message = "*N.D.I DAILY TRUANCY REPORT - " + today + "*\n\n";
     
-    // Select all the truant blocks we created in the last step
     const truantBlocks = document.querySelectorAll('.border-danger');
+    let hasTruants = false;
     
     truantBlocks.forEach(block => {
-        let className = block.querySelector('.fw-bold').innerText;
-        let names = block.querySelector('.text-dark').innerText;
+        // Tip: Use .textContent instead of .innerText for better performance
+        let className = block.querySelector('.fw-bold').textContent.trim();
+        let names = block.querySelector('.text-dark').textContent.trim();
         
-        if (names && names !== "None") {
-            message += "📍 *" + className + "*\n" + names + "\n\n";
+        if (names && names.toLowerCase() !== "none" && names !== "") {
+            message += "- *" + className + "*\n" + names + "\n\n";
+            hasTruants = true;
         }
     });
 
+    if (!hasTruants) {
+        message += "No truancy reported for today.";
+    }
+
     message += "_Sent via Naura Digital Initiative_";
 
-    // Encode for URL and open WhatsApp
     let whatsappUrl = "https://wa.me/?text=" + encodeURIComponent(message);
     window.open(whatsappUrl, '_blank');
 }

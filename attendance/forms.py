@@ -3,6 +3,7 @@ from django import forms
 from .models import AttendanceRecord
 from django.core.exceptions import ValidationError
 from .models import DailyTODReport
+from .models import ResultTemplate, ResultTemplateStatus
 
 class AttendanceForm(forms.ModelForm):
     class Meta:
@@ -105,4 +106,68 @@ class TODReportForm(forms.ModelForm):
             'maintenance_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'overall_comments': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'teacher_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Mr. Cedes Japhet'}),
-        }    
+        }
+
+
+class ResultTemplateForm(forms.ModelForm):
+    class Meta:
+        model = ResultTemplate
+        fields = ['name', 'workbook']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Form One Midterm 2026'}),
+            'workbook': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.status = ResultTemplateStatus.OPEN
+
+    def clean_workbook(self):
+        workbook = self.cleaned_data.get('workbook')
+        if workbook and not workbook.name.lower().endswith('.xlsx'):
+            raise ValidationError("Please upload an Excel workbook in .xlsx format.")
+        return workbook
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.status = ResultTemplateStatus.OPEN
+        if commit:
+            instance.save()
+        return instance
+
+
+class ResultEntryBulkForm(forms.Form):
+    submit_mode = forms.ChoiceField(
+        choices=[('draft', 'Save Draft'), ('final', 'Submit Final')],
+        widget=forms.HiddenInput(),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        valid_codes = {'', '-', 'ABS', 'INC'}
+
+        for key, value in self.data.items():
+            if not key.startswith('score_'):
+                continue
+
+            score = (value or '').strip().upper()
+            if score in valid_codes:
+                continue
+            try:
+                numeric_score = float(score)
+            except ValueError as exc:
+                raise ValidationError(
+                    f"{score} is not a valid mark. Use a number, ABS, INC, or leave blank."
+                ) from exc
+
+            if numeric_score < 0 or numeric_score > 100:
+                raise ValidationError("Marks must be between 0 and 100.")
+
+        return cleaned_data
+
+
+class ResultTemplateStatusForm(forms.Form):
+    status = forms.ChoiceField(
+        choices=ResultTemplateStatus.choices,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )

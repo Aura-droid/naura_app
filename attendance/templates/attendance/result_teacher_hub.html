@@ -1,0 +1,86 @@
+{% extends "attendance/base.html" %}
+
+{% block content %}
+<div class="container mt-5 pb-5">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Exam Templates</h2>
+            <p class="text-muted mb-0">Choose the open template and subject you want to fill.</p>
+        </div>
+        <a href="{% url 'teacher_hub' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Hub
+        </a>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap mb-4">
+        <a href="{% url 'teacher_result_hub' %}" class="btn {% if status_filter == 'all' %}btn-dark{% else %}btn-outline-dark{% endif %} btn-sm">All Subjects</a>
+        <a href="{% url 'teacher_result_hub' %}?status=pending" class="btn {% if status_filter == 'pending' %}btn-danger{% else %}btn-outline-danger{% endif %} btn-sm">Only Pending</a>
+        <a href="{% url 'teacher_result_hub' %}?status=in_progress" class="btn {% if status_filter == 'in_progress' %}btn-warning text-dark{% else %}btn-outline-warning{% endif %} btn-sm">In Progress</a>
+        <a href="{% url 'teacher_result_hub' %}?status=submitted" class="btn {% if status_filter == 'submitted' %}btn-success{% else %}btn-outline-success{% endif %} btn-sm">Submitted</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% if template_rows %}
+        <div class="row g-4">
+            {% for item in template_rows %}
+                {% with template=item.template %}
+                    <div class="col-12">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                                    <div>
+                                        <h4 class="mb-1">{{ template.name }}</h4>
+                                        <p class="text-muted mb-0 small">
+                                            {{ template.students.count }} students · {{ template.subjects.count }} subjects
+                                        </p>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+                                            {{ template.get_status_display }}
+                                        </span>
+                                        {% if item.pending_subjects %}
+                                            <div class="small text-danger mt-2">{{ item.pending_subjects }} subject{{ item.pending_subjects|pluralize }} still need submission</div>
+                                        {% else %}
+                                            <div class="small text-success mt-2">All subjects submitted</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row g-3">
+                                    {% for row in item.subject_rows %}
+                                        <div class="col-md-4 col-sm-6">
+                                            <a href="{% url 'teacher_result_entry' template.id row.subject.id %}" class="btn btn-outline-primary w-100 py-3 text-start h-100">
+                                                <span class="fw-bold d-block">{{ row.subject.name }}</span>
+                                                <span class="small d-block mt-1 {% if row.status_class == 'success' %}text-success{% elif row.status_class == 'warning' %}text-warning{% else %}text-danger{% endif %}">
+                                                    {{ row.status_label }}
+                                                </span>
+                                                <span class="small text-muted">{{ row.final_count }}/{{ row.total_students }} final submissions</span>
+                                                {% if row.latest_updated_by %}
+                                                    <span class="small text-muted d-block mt-1">Last update: {{ row.latest_updated_by }} at {{ row.latest_updated_at|date:"d M H:i" }}</span>
+                                                {% endif %}
+                                            </a>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endwith %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-5 text-center">
+                <i class="bi bi-journal-x text-muted" style="font-size: 3rem;"></i>
+                <h4 class="mt-3">No Open Templates</h4>
+                <p class="text-muted mb-0">Academic office has not opened any result sheet for submission yet.</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

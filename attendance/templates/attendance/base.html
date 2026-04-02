@@ -7,125 +7,145 @@
     <title>Naura Secondary Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="favicon" href="{% static 'assets/img/nauraicon.svg' %}" type="image/svg+xml">
+    <link rel="icon" href="{% static 'assets/img/nauraicon.jpg' %}" type="image/jpeg">
     <style>
-        /* NDI Hero Banner Styling */
-.ndi-hero {
-    position: relative;
-    height: 350px; /* Standard height for Desktop */
-    width: 100%;
-    overflow: hidden;
-    background-color: #000; /* Fallback color */
-}
-
-.ndi-hero-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* This is the "Magic" - keeps proportions perfect */
-    object-position: center 20%; /* Adjusts focus to the top/middle where faces usually are */
-    opacity: 0.6; /* Dims the image so white text is easy to read */
-    transition: transform 0.5s ease;
-}
-
-.ndi-overlay-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    width: 90%;
-}
-
-/* Mobile Adjustments */
-@media (max-width: 768px) {
-    .ndi-hero {
-        height: 250px; /* Shorter on phones so buttons are visible sooner */
-    }
-    .ndi-overlay-text h1 {
-        font-size: 1.8rem; /* Smaller text for small screens */
-    }
-}
-
-/* Full-screen loader overlay */
-#loader {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #ffffff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    transition: opacity 0.5s ease-out, visibility 0.5s;
-}
-
-/* The Pulsing SVG Icon */
-.loader-icon {
-    width: 100px; /* Adjust size as needed */
-    height: auto;
-    animation: pulse-glow 1.5s infinite ease-in-out;
-}
-
-@keyframes pulse-glow {
-    0% {
-        transform: scale(0.9);
-        opacity: 0.7;
-    }
-    50% {
-        transform: scale(1.1);
-        opacity: 1;
-        filter: drop-shadow(0 0 10px rgba(0, 123, 255, 0.5)); /* Optional glow */
-    }
-    100% {
-        transform: scale(0.9);
-        opacity: 0.7;
-    }
-}
-
-/* Class to hide loader after page loads */
-.loader-hidden {
-    opacity: 0;
-    visibility: hidden;
-}
-</style>
+        .ndi-hero {
+            position: relative;
+            height: 280px;
+            width: 100%;
+            overflow: hidden;
+            background-color: #0b1324;
+        }
+        .ndi-hero-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 24%;
+            opacity: 0.45;
+            transition: transform 0.5s ease;
+        }
+        .ndi-overlay-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 92%;
+        }
+        .portal-shell {
+            margin-top: -52px;
+            position: relative;
+            z-index: 5;
+        }
+        .portal-nav {
+            backdrop-filter: blur(14px);
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            border-radius: 18px;
+        }
+        .nav-chip {
+            border-radius: 999px;
+        }
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out, visibility 0.5s;
+        }
+        .loader-icon {
+            width: 100px;
+            height: auto;
+            animation: pulse-glow 1.5s infinite ease-in-out;
+        }
+        @keyframes pulse-glow {
+            0% { transform: scale(0.9); opacity: 0.7; }
+            50% { transform: scale(1.1); opacity: 1; filter: drop-shadow(0 0 10px rgba(0, 123, 255, 0.45)); }
+            100% { transform: scale(0.9); opacity: 0.7; }
+        }
+        .loader-hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        @media (max-width: 768px) {
+            .ndi-hero {
+                height: 220px;
+            }
+            .ndi-overlay-text h1 {
+                font-size: 1.55rem;
+            }
+            .portal-shell {
+                margin-top: -34px;
+            }
+        }
+    </style>
 </head>
 <body class="bg-light">
-    
 <div id="loader">
     <img src="{% static 'assets/img/nauraicon.svg' %}" alt="Naura Icon" class="loader-icon">
 </div>
-    <nav class="navbar navbar-dark bg-primary shadow-sm mb-4">
-        <div class="ndi-hero mb-5 shadow-sm">
-            <img src="{% static 'assets/img/naura.jpg' %}" class="ndi-hero-img" alt="Naura Students">
-            <div class="ndi-overlay-text text-white">
-                <h1 class="fw-bold text-uppercase tracking-tight">Naura Digital Initiative</h1>
-                <div class="badge bg-primary mb-2">NDI System v1.0</div>
-                <p class="lead d-none d-md-block">Empowering Teachers, Shaping the Future of Naura Secondary</p>
+
+<header class="mb-4">
+    <div class="ndi-hero shadow-sm">
+        <img src="{% static 'assets/img/naura.jpg' %}" class="ndi-hero-img" alt="Naura Students">
+        <div class="ndi-overlay-text text-white">
+            <div class="badge bg-warning text-dark mb-3 px-3 py-2">NDI System v1.0</div>
+            <h1 class="fw-bold text-uppercase tracking-tight">Naura Digital Initiative</h1>
+            <p class="lead d-none d-md-block mb-0">Quality and Excellence</p>
+        </div>
+    </div>
+
+    {% if request.user.is_authenticated %}
+        <div class="container portal-shell">
+            <div class="portal-nav shadow-sm px-3 py-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <div class="fw-bold text-dark">{{ request.user.get_full_name|default:request.user.username }}</div>
+                        <div class="small text-muted">
+                            {% if request.user.is_superuser %}
+                                Superuser
+                            {% else %}
+                                {{ request.user.groups.all|join:", "|default:"Portal User" }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        {% if can_access_teacher_hub %}
+                            <a href="{% url 'teacher_hub' %}" class="btn btn-outline-primary btn-sm nav-chip">Teacher Hub</a>
+                        {% endif %}
+                        {% if can_access_academic_office %}
+                            <a href="{% url 'result_template_dashboard' %}" class="btn btn-outline-warning btn-sm nav-chip">Academic Office</a>
+                        {% endif %}
+                        {% if can_access_management %}
+                            <a href="{% url 'master_dashboard' %}" class="btn btn-outline-dark btn-sm nav-chip">Management</a>
+                        {% endif %}
+                        <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm nav-chip">Logout</a>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div class="container">
-            </div>
-    </nav>
+    {% endif %}
+</header>
 
-    <main>
-        {% block content %}
-        {% endblock %}
-    </main>
-    <script>
-        window.addEventListener("load", function() {
-            const loader = document.getElementById("loader");
-            loader.classList.add("loader-hidden");
-            
-            // Optional: Remove from DOM after transition to keep the page light
-            setTimeout(() => {
-                loader.style.display = "none";
-            }, 500);
-        });
-    </script>
+<main>
+    {% block content %}{% endblock %}
+</main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    window.addEventListener("load", function() {
+        const loader = document.getElementById("loader");
+        loader.classList.add("loader-hidden");
+        setTimeout(() => {
+            loader.style.display = "none";
+        }, 500);
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

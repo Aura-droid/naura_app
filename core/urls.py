@@ -19,6 +19,8 @@ from django.urls import include, path
 from attendance import views
 from attendance.views import export_attendance_pdf, master_dashboard, take_attendance # Good, you have this
 from django.contrib.auth import views as auth_views
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -33,6 +35,17 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='attendance/login.html'), name='login'),
     path('login-check/', views.login_success_redirect, name='login_redirect'),
     path('hub/', views.teacher_hub, name='teacher_hub'),
+    path('hub/results/', views.teacher_result_hub, name='teacher_result_hub'),
+    path('hub/results/<int:template_id>/<int:subject_id>/', views.teacher_result_entry, name='teacher_result_entry'),
+    path('hub/results/<int:template_id>/<int:subject_id>/autosave/', views.autosave_result_entry, name='autosave_result_entry'),
     path('logout/', auth_views.LogoutView.as_view(http_method_names=['get', 'post', 'options'], next_page='login'), name='logout'),
     path('export-weekly-truants-pdf/', views.export_weekly_truants_pdf, name='export_weekly_truants_pdf'),
+    path('results/dashboard/', views.result_template_dashboard, name='result_template_dashboard'),
+    path('results/<int:template_id>/', views.result_template_detail, name='result_template_detail'),
+    path('results/<int:template_id>/status/', views.update_result_template_status, name='update_result_template_status'),
+    path('results/<int:template_id>/export/', views.export_result_template_excel, name='export_result_template_excel'),
+    path('results/<int:template_id>/missing-submissions/', views.export_missing_submissions_report, name='export_missing_submissions_report'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
