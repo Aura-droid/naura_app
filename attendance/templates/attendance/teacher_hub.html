@@ -25,6 +25,22 @@
             <a href="{% url 'teacher_result_hub' %}?status=pending" class="btn btn-sm btn-outline-dark">View Pending Subjects</a>
         </div>
     {% endif %}
+
+    {% if can_access_academic_office or can_access_management %}
+        <div class="d-flex gap-2 flex-wrap justify-content-center mb-4">
+            {% if can_access_academic_office %}
+                <a href="{% url 'result_template_dashboard' %}" class="btn btn-outline-warning rounded-pill">
+                    <i class="bi bi-journal-check me-2"></i>Academic Office Dashboard
+                </a>
+            {% endif %}
+            {% if can_access_management %}
+                <a href="{% url 'master_dashboard' %}" class="btn btn-outline-dark rounded-pill">
+                    <i class="bi bi-speedometer2 me-2"></i>Management Dashboard
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+
     <div class="text-center mb-5">
         <h2 class="fw-bold">Naura Staff Portal</h2>
         <p class="text-muted">Select an action for today</p>

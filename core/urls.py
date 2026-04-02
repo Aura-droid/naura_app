@@ -23,6 +23,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    path('', views.home_redirect, name='home'),
     path('admin/', admin.site.urls),
     path('entry/', take_attendance, name='take_attendance'),
     path('dashboard/', master_dashboard, name='master_dashboard'),

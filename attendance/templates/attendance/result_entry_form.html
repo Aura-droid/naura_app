@@ -17,6 +17,21 @@
         </div>
     </div>
 
+    {% if can_access_academic_office or can_access_management %}
+        <div class="d-flex gap-2 flex-wrap mb-4">
+            {% if can_access_academic_office %}
+                <a href="{% url 'result_template_dashboard' %}" class="btn btn-outline-warning btn-sm">
+                    <i class="bi bi-journal-check me-2"></i>Academic Office Dashboard
+                </a>
+            {% endif %}
+            {% if can_access_management %}
+                <a href="{% url 'master_dashboard' %}" class="btn btn-outline-dark btn-sm">
+                    <i class="bi bi-speedometer2 me-2"></i>Management Dashboard
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+
     {% if messages %}
         {% for message in messages %}
             <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">{{ message }}</div>

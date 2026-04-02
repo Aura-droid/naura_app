@@ -171,6 +171,11 @@ def get_ai_insights(monthly_data, tod_notes):
 
 # --- LOGIN & REDIRECT LOGIC ---
 
+def home_redirect(request):
+    if request.user.is_authenticated:
+        return login_success_redirect(request)
+    return redirect('login')
+
 def login_success_redirect(request):
     """Debug version of the Traffic Cop to catch group name errors."""
     if not request.user.is_authenticated:

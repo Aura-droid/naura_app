@@ -13,6 +13,12 @@
     </div>
 
     <div class="d-flex gap-2 flex-wrap mb-4">
+        {% if can_access_academic_office %}
+            <a href="{% url 'result_template_dashboard' %}" class="btn btn-outline-warning btn-sm">Academic Office Dashboard</a>
+        {% endif %}
+        {% if can_access_management %}
+            <a href="{% url 'master_dashboard' %}" class="btn btn-outline-dark btn-sm">Management Dashboard</a>
+        {% endif %}
         <a href="{% url 'teacher_result_hub' %}" class="btn {% if status_filter == 'all' %}btn-dark{% else %}btn-outline-dark{% endif %} btn-sm">All Subjects</a>
         <a href="{% url 'teacher_result_hub' %}?status=pending" class="btn {% if status_filter == 'pending' %}btn-danger{% else %}btn-outline-danger{% endif %} btn-sm">Only Pending</a>
         <a href="{% url 'teacher_result_hub' %}?status=in_progress" class="btn {% if status_filter == 'in_progress' %}btn-warning text-dark{% else %}btn-outline-warning{% endif %} btn-sm">In Progress</a>
