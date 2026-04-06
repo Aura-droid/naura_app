@@ -177,6 +177,23 @@
     </div>
 </div>
 
+<div class="modal fade" id="attendanceWarningModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Class Needed</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Please select or enter a class name before submitting the attendance report.
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-warning px-4" data-bs-dismiss="modal">Okay</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
@@ -186,6 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const finalSubmit = document.getElementById('finalSubmitBtn');
     const modalElement = document.getElementById('confirmModal');
     const bootstrapModal = new bootstrap.Modal(modalElement);
+    const warningModal = new bootstrap.Modal(document.getElementById('attendanceWarningModal'));
 
     // 1. Math Logic (Auto-Calculations)
     form.addEventListener('input', function() {
@@ -206,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
     trigger.addEventListener('click', function() {
         const className = document.querySelector('[name="school_class"]').value;
         if (!className) {
-            alert("Please select or enter a Class name first.");
+            warningModal.show();
             return;
         }
         document.getElementById('modalClassName').innerText = className;

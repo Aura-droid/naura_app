@@ -9,6 +9,14 @@
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a href="{% url 'teacher_result_hub' %}" class="btn btn-outline-secondary">Back</a>
+            {% if analysis_available %}
+                <a href="{% url 'teacher_subject_analysis' template.id subject.id %}" class="btn btn-outline-primary">
+                    <i class="bi bi-bar-chart-line me-2"></i>View Subject Analysis
+                </a>
+                <a href="{% url 'export_teacher_subject_analysis_pdf' template.id subject.id %}" class="btn btn-outline-success">
+                    <i class="bi bi-file-earmark-pdf me-2"></i>Export Analysis PDF
+                </a>
+            {% endif %}
             {% if can_edit %}
                 <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">Open for editing</span>
             {% else %}
@@ -67,6 +75,65 @@
             </div>
             <div class="small text-muted mt-2">
                 Paste either one score per line in the same candidate order, or lines like <code>0051 20</code>.
+            </div>
+            <div class="mt-3">
+                <button
+                    class="btn btn-sm btn-outline-secondary"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#bulkPasteHelp"
+                    aria-expanded="false"
+                    aria-controls="bulkPasteHelp"
+                >
+                    <i class="bi bi-info-circle me-2"></i>How Bulk Paste Works
+                </button>
+                <div class="collapse mt-3" id="bulkPasteHelp">
+                    <div class="p-3 rounded-3 border bg-light">
+                        <div class="fw-semibold text-dark mb-2">How Bulk Paste Works</div>
+                        <div class="small text-muted mb-2">
+                            You can paste marks in two simple ways, then click <strong>Apply Bulk Paste</strong>.
+                        </div>
+                        <div class="small mb-2">
+                            <strong>1. One mark per line:</strong> use this when your marks are already in the same order as the candidate numbers on this page.
+                        </div>
+                        <pre class="small bg-white border rounded p-2 mb-2"><code>20
+31
+45
+ABS
+28</code></pre>
+                        <div class="small mb-2">
+                            <strong>2. Candidate number and mark together:</strong> use this when the list is not in order.
+                        </div>
+                        <pre class="small bg-white border rounded p-2 mb-3"><code>0051 20
+0052 31
+0053 ABS
+0054 45</code></pre>
+                        <div class="fw-semibold text-dark mb-2">Real Examples</div>
+                        <div class="small mb-2">
+                            <strong>Example 1:</strong> copied from WhatsApp as a clean column.
+                        </div>
+                        <pre class="small bg-white border rounded p-2 mb-2"><code>12
+18
+25
+30
+41</code></pre>
+                        <div class="small mb-2">
+                            <strong>Example 2:</strong> copied from notes with candidate numbers.
+                        </div>
+                        <pre class="small bg-white border rounded p-2 mb-2"><code>0101 55
+0102 61
+0103 48
+0104 ABS</code></pre>
+                        <div class="small mb-2">
+                            <strong>Example 3:</strong> mixed real marks for quick entry.
+                        </div>
+                        <pre class="small bg-white border rounded p-2 mb-0"><code>0231 67
+0232 74
+0233 INC
+0234 39
+0235 80</code></pre>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -196,6 +263,31 @@
 </style>
 
 {% if can_edit %}
+<div class="modal fade" id="submitConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Confirm Submission</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">You are about to submit <strong>{{ subject.name }}</strong>.</p>
+                <div class="rounded-3 bg-light border p-3">
+                    <div><strong>Filled:</strong> <span id="confirm-filled-count">0</span></div>
+                    <div><strong>Blank:</strong> <span id="confirm-blank-count">0</span></div>
+                </div>
+                <p class="text-muted small mt-3 mb-0">Blank score boxes are highlighted so you can review them before sending final marks.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="modal-final-submit-btn">Yes, Submit Final Marks</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if can_edit %}
 <script>
     (function () {
         const form = document.getElementById('results-form');
@@ -213,6 +305,10 @@
         const blankCountEl = document.getElementById('blank-count');
         const statusLabelEl = document.getElementById('status-label');
         const autosaveStatusEl = document.getElementById('autosave-status');
+        const confirmFilledCountEl = document.getElementById('confirm-filled-count');
+        const confirmBlankCountEl = document.getElementById('confirm-blank-count');
+        const modalFinalSubmitBtn = document.getElementById('modal-final-submit-btn');
+        const confirmModal = new bootstrap.Modal(document.getElementById('submitConfirmModal'));
         let dirty = false;
         let autosaveTimer = null;
         let autosaveInFlight = false;
@@ -345,13 +441,14 @@
                 const isBlank = normalizeValue(input.value) === '';
                 input.classList.toggle('score-required', isBlank);
             });
-            const proceed = window.confirm(
-                `You are about to submit {{ subject.name }}, ${filled} filled, ${blank} blank. Continue?`
-            );
-            if (!proceed) {
-                return;
-            }
+            confirmFilledCountEl.textContent = filled;
+            confirmBlankCountEl.textContent = blank;
+            confirmModal.show();
+        });
+
+        modalFinalSubmitBtn.addEventListener('click', () => {
             submitModeInput.value = 'final';
+            confirmModal.hide();
             form.submit();
         });
 

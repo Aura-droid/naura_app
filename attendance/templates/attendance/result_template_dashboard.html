@@ -77,7 +77,7 @@
                                         <tr>
                                             <td>
                                                 <div class="fw-semibold">{{ template.name }}</div>
-                                                <div class="small text-muted">{{ template.sheet_name|default:"Not parsed" }}</div>
+                                                <div class="small text-muted">Sheet: {{ template.sheet_name|default:"Not parsed" }}</div>
                                             </td>
                                             <td>
                                                 <span class="badge {% if template.status == 'open' %}bg-success{% elif template.status == 'closed' %}bg-secondary{% elif template.status == 'withdrawn' %}bg-danger{% else %}bg-warning text-dark{% endif %}">

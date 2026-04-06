@@ -6,9 +6,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         msg = "Daily Reminder: Please ensure your TOD and Class Attendance reports are submitted by 12:00 PM."
-        status = send_staff_reminder(msg)
+        result = send_staff_reminder(msg)
         
-        if status == 200:
+        if result.get('ok'):
             self.stdout.write(self.style.SUCCESS('Reminders sent successfully!'))
         else:
-            self.stdout.write(self.style.ERROR(f'Failed to send. Status: {status}'))
+            self.stdout.write(
+                self.style.ERROR(
+                    f"Failed to send. Status: {result.get('status_code') or 'no response'}. {result.get('error', '')}"
+                )
+            )

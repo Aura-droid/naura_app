@@ -71,6 +71,11 @@
                         Reset to Today
                     </a>
                 </div>
+                <div class="col-auto">
+                    <a href="{% url 'export_attendance_pdf' %}?date={{ today|date:'Y-m-d' }}" class="btn btn-danger">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Attendance PDF
+                    </a>
+                </div>
             </form>
         </div>
     </div>
@@ -224,7 +229,13 @@
                                 <span class="fw-bold text-danger">{{ record.school_class|upper }}:</span> 
                                 <span class="text-dark">{{ record.truant_names }}</span>
                             </div>
-                            <div class="mb-4">
+                        {% endif %}
+                    {% empty %}
+                        <p class="text-muted text-center">No truants reported today.</p>
+                    {% endfor %}
+                    {% if has_truants %}
+                        <div class="mt-4 pt-3 border-top">
+                            <div class="mb-3">
                                 <button onclick="shareOnWhatsApp()" class="btn btn-success shadow-sm w-100 fw-bold d-flex align-items-center justify-content-center">
                                     <i class="bi bi-whatsapp me-2" style="font-size: 1.2rem;"></i> 
                                     Share Daily Truant List to Staff Group
@@ -238,10 +249,8 @@
                                     *Generates a 7-day summary with student strike counts.
                                 </small>
                             </div>
-                        {% endif %}
-                    {% empty %}
-                        <p class="text-muted text-center">No truants reported today.</p>
-                    {% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
