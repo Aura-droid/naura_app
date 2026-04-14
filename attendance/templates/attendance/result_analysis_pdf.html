@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 1.2cm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            color: #233142;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2pt solid #0d6efd;
+            padding-bottom: 10pt;
+            margin-bottom: 16pt;
+        }
+        .school-name {
+            font-size: 18pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #0d3b66;
+        }
+        .report-title {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-top: 4pt;
+            color: #0d6efd;
+        }
+        .meta {
+            font-size: 9pt;
+            color: #5c677d;
+            margin-top: 4pt;
+        }
+        .notice {
+            background: #eef6ff;
+            border-left: 4pt solid #0d6efd;
+            padding: 8pt 10pt;
+            margin-bottom: 14pt;
+            font-size: 9pt;
+        }
+        .subject-card {
+            margin-bottom: 14pt;
+        }
+        .subject-title {
+            background: #f3f7fb;
+            border-left: 4pt solid #0d6efd;
+            padding: 7pt 10pt;
+            font-size: 11pt;
+            font-weight: bold;
+            color: #1d3557;
+        }
+        table.analysis-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table.analysis-table th {
+            background: #0d6efd;
+            color: white;
+            border: 1pt solid #d7e3f4;
+            padding: 5pt;
+            font-size: 8.5pt;
+            text-align: center;
+        }
+        table.analysis-table td {
+            border: 1pt solid #d7e3f4;
+            padding: 5pt;
+            font-size: 8.5pt;
+            text-align: center;
+        }
+        .total-row td {
+            background: #f8fafc;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 20pt;
+            border-top: 1pt solid #d7e3f4;
+            padding-top: 6pt;
+            font-size: 8pt;
+            color: #6c757d;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="{{ logo_path }}" width="80" height="80">
+        <div class="school-name">Mwandet Digital</div>
+        <div class="report-title">{{ report_title }}</div>
+        <div class="meta">{{ template_obj.name }}{% if template_obj.sheet_name %} | Sheet: {{ template_obj.sheet_name }}{% endif %}</div>
+        <div class="meta">{{ report_subtitle }}</div>
+    </div>
+
+    <div class="notice">
+        This analysis follows the grade logic built into the uploaded workbook template and shows the saved marks split by gender.
+    </div>
+
+    {% for row in analysis_rows %}
+        <div class="subject-card">
+            <div class="subject-title">{{ row.subject.name }}</div>
+            <table class="analysis-table">
+                <thead>
+                    <tr>
+                        <th>Gender</th>
+                        <th>A</th>
+                        <th>B</th>
+                        <th>C</th>
+                        <th>D</th>
+                        <th>F</th>
+                        <th>ABS</th>
+                        <th>INC</th>
+                        <th>BLANK</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Male</strong></td>
+                        <td>{{ row.male.A }}</td>
+                        <td>{{ row.male.B }}</td>
+                        <td>{{ row.male.C }}</td>
+                        <td>{{ row.male.D }}</td>
+                        <td>{{ row.male.F }}</td>
+                        <td>{{ row.male.ABS }}</td>
+                        <td>{{ row.male.INC }}</td>
+                        <td>{{ row.male.BLANK }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Female</strong></td>
+                        <td>{{ row.female.A }}</td>
+                        <td>{{ row.female.B }}</td>
+                        <td>{{ row.female.C }}</td>
+                        <td>{{ row.female.D }}</td>
+                        <td>{{ row.female.F }}</td>
+                        <td>{{ row.female.ABS }}</td>
+                        <td>{{ row.female.INC }}</td>
+                        <td>{{ row.female.BLANK }}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td>Total</td>
+                        <td>{{ row.total.A }}</td>
+                        <td>{{ row.total.B }}</td>
+                        <td>{{ row.total.C }}</td>
+                        <td>{{ row.total.D }}</td>
+                        <td>{{ row.total.F }}</td>
+                        <td>{{ row.total.ABS }}</td>
+                        <td>{{ row.total.INC }}</td>
+                        <td>{{ row.total.BLANK }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {% endfor %}
+
+    <div class="footer">
+        Generated by Mwandet Digital | {% now "d M Y, H:i" %} | User: {{ user.username }}
+    </div>
+</body>
+</html>

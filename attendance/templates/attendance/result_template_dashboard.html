@@ -1,0 +1,115 @@
+{% extends "attendance/base.html" %}
+
+{% block content %}
+<div class="container mt-4 pb-5">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Academic Office Templates</h2>
+            <p class="text-muted mb-0">Upload the official workbook, it opens for teachers immediately, then export the consolidated Excel.</p>
+        </div>
+        <a href="{% url 'master_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% if pending_template_rows %}
+        <div class="alert alert-warning border-0 shadow-sm">
+            <strong>Pending submission reminder.</strong>
+            {% for item in pending_template_rows %}
+                <div class="small mt-1">{{ item.template.name }} still has {{ item.pending_subjects }} subject{{ item.pending_subjects|pluralize }} pending.</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h4 class="mb-3">New Template</h4>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Template Name</label>
+                            {{ form.name }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Excel Workbook</label>
+                            {{ form.workbook }}
+                        </div>
+                        <p class="small text-muted">New templates are opened automatically for teachers.</p>
+                        <button type="submit" class="btn btn-primary w-100">Upload Template</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">Existing Templates</h4>
+                        <span class="small text-muted">{{ template_rows|length }} total</span>
+                    </div>
+
+                    {% if template_rows %}
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Status</th>
+                                        <th>Submission</th>
+                                        <th>Subjects</th>
+                                        <th>Students</th>
+                                        <th>Entries</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in template_rows %}
+                                        {% with template=item.template %}
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">{{ template.name }}</div>
+                                                <div class="small text-muted">Sheet: {{ template.sheet_name|default:"Not parsed" }}</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge {% if template.status == 'open' %}bg-success{% elif template.status == 'closed' %}bg-secondary{% elif template.status == 'withdrawn' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                                    {{ template.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if item.pending_subjects %}
+                                                    <span class="badge bg-danger">{{ item.pending_subjects }} pending</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">All submitted</span>
+                                                {% endif %}
+                                                <div class="small text-muted mt-1">{{ item.submitted_subjects }}/{{ template.subject_count }} complete</div>
+                                            </td>
+                                            <td>{{ template.subject_count }}</td>
+                                            <td>{{ template.student_count }}</td>
+                                            <td>{{ template.entry_count }}</td>
+                                            <td class="text-end">
+                                                <a href="{% url 'result_template_detail' template.id %}" class="btn btn-sm btn-outline-primary">Open</a>
+                                            </td>
+                                        </tr>
+                                        {% endwith %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No templates uploaded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

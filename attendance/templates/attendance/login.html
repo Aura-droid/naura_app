@@ -1,0 +1,37 @@
+{% extends "attendance/base.html" %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card shadow-lg border-0" style="width: 100%; max-width: 400px; border-radius: 15px;">
+        <div class="card-body p-5 text-center">
+            <h2 class="text-primary fw-bold mb-4">Mwandet Digital</h2>
+            <p class="text-muted mb-4">Please log in to access the portal</p>
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3 text-start">
+                    <label class="form-label small fw-bold">Username</label>
+                    <input type="text" name="username" class="form-control rounded-pill" required>
+                </div>
+                <div class="mb-4 text-start">
+                    <label class="form-label small fw-bold">Password</label>
+                    <input type="password" name="password" class="form-control rounded-pill" required>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" name="remember_me" class="form-check-input" id="rememberMe">
+                    <label class="form-check-label small text-muted" for="rememberMe">Remember me on this device</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold shadow-sm">
+                    Login
+                </button>
+            </form>
+
+            {% if form.errors %}
+                <div class="alert alert-danger mt-3 small py-2">
+                    Invalid username or password.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

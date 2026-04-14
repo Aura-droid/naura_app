@@ -1,0 +1,285 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOD Daily Report | Mwandet Digital</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="icon" href="{% static 'assets/img/md-app-icon.png' %}" type="image/png">
+    <style>
+        html, body {
+            overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
+        }
+        body {
+            touch-action: pan-y;
+        }
+        .form-control,
+        .form-select,
+        input,
+        textarea,
+        select {
+            font-size: 16px !important;
+            min-height: 48px;
+        }
+        textarea.form-control {
+            min-height: 120px;
+        }
+        .card,
+        .alert {
+            overflow: hidden;
+        }
+        @media (max-width: 768px) {
+            .container.py-5 {
+                padding-top: 1rem !important;
+                padding-bottom: 2rem !important;
+            }
+            .card-header,
+            .card-body {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+            .btn-lg {
+                font-size: 1rem;
+                padding-top: 0.9rem;
+                padding-bottom: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-light">
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="container mt-3">
+                <a href="{% url 'teacher_hub' %}" class="btn btn-outline-secondary btn-sm shadow-sm mb-3">
+                    <i class="bi bi-arrow-left-circle me-1"></i> Back to Hub
+                </a>
+            </div>
+            <div class="card shadow border-0 mb-4">
+                <div class="card-header bg-primary text-white p-4">
+                    <h3 class="mb-0"><i class="bi bi-clipboard-check"></i> TOD Daily Report</h3>
+                    <p class="mb-0 opacity-75">Mwandet Digital Official Log</p>
+                </div>
+            </div>
+            {% if form.errors %}
+            <div class="alert alert-danger shadow-sm border-0 mb-4">
+                <h5 class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i> Form Submission Failed</h5>
+                <ul class="mb-0">
+                    {% for field in form %}
+                        {% if field.errors %}
+                            <li><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if form.non_field_errors %}
+                        <li>{{ form.non_field_errors|striptags }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-success shadow-lg border-0 p-4 mb-4 animate__animated animate__fadeInDown" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill fs-2 me-3"></i>
+                <div>
+                    <h5 class="alert-heading mb-1 fw-bold">Report Submitted!</h5>
+                    <p class="mb-0">{{ message }}</p>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+{% endif %}
+{% if tod_report_exists %}
+    <div class="alert alert-info border-info shadow-sm mb-4">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        <strong>Note:</strong> A TOD report for <b>today ({{ today }})</b> has already been started. 
+        You can review and update the details below.
+    </div>
+{% endif %}
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-warning text-dark fw-bold">
+                        <i class="bi bi-sun-fill me-2"></i> Morning Phase
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small">Arrival Time</label>
+                                {{ form.arrival_time }}
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold small">Compound Cleanliness</label>
+                                {{ form.compound_cleanliness }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold small">Morning Sessions (Prep)</label>
+                                {{ form.morning_sessions }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-info text-white fw-bold">
+                        <i class="bi bi-egg-fried me-2"></i> Afternoon & Lunch
+                    </div>
+                    <div class="card-body">
+                        <label class="form-label fw-bold small">Lunch & Catering Details</label>
+                        {{ form.lunch_details }}
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-primary text-white fw-bold py-3">
+                        <i class="bi bi-moon-stars-fill me-2"></i> Evening & Departure
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-bold small">Evening & Remedial Classes</label>
+                                {{ form.evening_remedial }}
+                                <div class="form-text">Did the afterschool classes commence? Any challenges?</div>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold small">Student Departure Time</label>
+                                {{ form.departure_time }}
+                                <div class="form-text">What time were students released?</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4 border-start border-4 border-danger">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-12 mb-2">
+                                <label class="form-label fw-bold text-danger">T.O.D Comments, Maintenance & Utilities</label>
+                                {{ form.maintenance_notes }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Lead Teacher Name (Current User)</label>
+                                {{ form.teacher_name }}
+                                <div class="form-text small">Who is the primary person filing this?</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">TOD Names (Full Team)</label>
+                                {{ form.tod_names }}
+                                <div class="form-text small">List all teachers on duty today.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid mb-5">
+                    <button type="button" id="modalTrigger" class="btn btn-primary btn-lg shadow">
+                        <i class="bi bi-cloud-arrow-up-fill me-2"></i> Submit Official Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="confirmTodModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-shield-check"></i> Submit Daily Report?</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="fs-5">Are you sure you want to file the official TOD report for <br><strong>{% now "jS F Y" %}</strong>?</p>
+                <div class="p-3 bg-light rounded text-start small">
+                    <p class="mb-1 text-muted"><strong>Final Check:</strong></p>
+                    <ul class="mb-0 text-muted">
+                        <li>Arrival & Departure times are accurate.</li>
+                        <li>All cleanliness & meal challenges are noted.</li>
+                        <li>Maintenance needs (Water/Power) are listed.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-3">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Wait, go back</button>
+                <button type="button" id="confirmSubmitBtn" class="btn btn-primary px-5">Yes, Submit Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="todWarningModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Missing TOD Team</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Please enter the TOD names before submitting the official report.
+            </div>
+            <div class="modal-footer border-0 p-3">
+                <button type="button" class="btn btn-warning px-4" data-bs-dismiss="modal">Okay</button>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const todForm = document.querySelector('form');
+    const fields = todForm.querySelectorAll('input, textarea, select');
+    const trigger = document.getElementById('modalTrigger');
+    const confirmBtn = document.getElementById('confirmSubmitBtn');
+    const bsModal = new bootstrap.Modal(document.getElementById('confirmTodModal'));
+    const warningModal = new bootstrap.Modal(document.getElementById('todWarningModal'));
+    const storageKey = 'tod_report_draft';
+
+    // 1. Load draft on page open
+    const savedData = JSON.parse(localStorage.getItem(storageKey));
+    if (savedData) {
+        fields.forEach(field => {
+            if (savedData[field.name]) {
+                field.value = savedData[field.name];
+            }
+        });
+    }
+
+    // 2. Save data to LocalStorage on every input
+    todForm.addEventListener('input', () => {
+        const dataToSave = {};
+        fields.forEach(field => {
+            dataToSave[field.name] = field.value;
+        });
+        localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+    });
+
+    // 3. Show the Modal instead of submitting immediately
+    trigger.addEventListener('click', function() {
+        const todNames = document.querySelector('[name="tod_names"]').value;
+        if (!todNames) {
+            warningModal.show();
+            return;
+        }
+        bsModal.show();
+    });
+
+    // 4. Handle the Final Submission from inside the Modal
+    confirmBtn.addEventListener('click', function() {
+        // Clear the draft so the next day starts fresh
+        localStorage.removeItem(storageKey);
+        
+        // Visual feedback
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Filing Report...';
+        
+        // Final submit
+        todForm.submit();
+    });
+});
+</script>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Helvetica', sans-serif;
+            color: #333;
+            line-height: 1.4;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #004085;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .school-name {
+            font-size: 22px;
+            font-weight: bold;
+            color: #004085;
+            text-transform: uppercase;
+        }
+        .report-title {
+            font-size: 16px;
+            margin-top: 5px;
+            color: #555;
+        }
+        
+        /* Summary Cards Layout */
+        .summary-box {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .summary-table {
+            width: 100%;
+            border: 1px solid #004085;
+        }
+        .summary-table td {
+            padding: 10px;
+            text-align: left;
+            border: none;
+            background-color: #f8f9fa;
+        }
+
+        table.main-data {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table.main-data th {
+            background-color: #004085;
+            color: white;
+            border: 1px solid #ddd;
+            padding: 6px;
+            font-size: 10px;
+        }
+        table.main-data td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            font-size: 10px;
+            text-align: center;
+        }
+        .grand-total-row {
+            background-color: #d1ecf1;
+            font-weight: bold;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            font-size: 9px;
+            color: #777;
+            border-top: 1px solid #eee;
+            padding-top: 5px;
+        }
+        .signature-section {
+            margin-top: 40px;
+        }
+        .sig-box {
+            display: inline-block;
+            width: 45%;
+            text-align: center;
+        }
+        .line {
+            border-top: 1px solid #000;
+            width: 80%;
+            margin: 0 auto;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="{{ logo_path }}" width="100" height="100">
+        <div class="school-name">Mwandet Digital</div>
+        <div class="report-title">Daily Attendance Summary Report</div>
+        <div style="font-size: 12px; margin-top: 10px;">Date: <strong>{{ today|date:"l, d F Y" }}</strong></div>
+    </div>
+
+    <div class="summary-box">
+        <table class="summary-table">
+            <tr>
+                <td>
+                    <strong>Grand Total Registered:</strong> {{ grand_total.rb|add:grand_total.rg }}<br>
+                    <strong>Total Present:</strong> {{ grand_total.b|add:grand_total.g }} 
+                    <span style="color: green;">({{ school_attendance_pct }}%)</span>
+                </td>
+                <td>
+                    <strong>Total Permitted:</strong> {{ grand_total.pb|add:grand_total.pg }}<br>
+                    <strong>Total Truancy:</strong> {{ grand_total.tb|add:grand_total.tg }} 
+                    <span style="color: red;">({{ school_truancy_pct }}%)</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <table class="main-data">
+        <thead>
+            <tr>
+                <th rowspan="2">CLASS</th>
+                <th colspan="2">REGISTERED</th>
+                <th colspan="2">PRESENT</th>
+                <th colspan="2">PERMITTED</th>
+                <th colspan="2">TRUANT</th>
+                <th rowspan="2">ATT. %</th>
+            </tr>
+            <tr>
+                <th>B</th><th>G</th>
+                <th>B</th><th>G</th>
+                <th>B</th><th>G</th>
+                <th>B</th><th>G</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td style="text-align: left; font-weight: bold;">{{ r.school_class }}</td>
+                <td>{{ r.total_boys_registered }}</td>
+                <td>{{ r.total_girls_registered }}</td>
+                <td>{{ r.present_boys }}</td>
+                <td>{{ r.present_girls }}</td>
+                <td>{{ r.permitted_boys }}</td>
+                <td>{{ r.permitted_girls }}</td>
+                <td>{{ r.truant_boys }}</td>
+                <td>{{ r.truant_girls }}</td>
+                <td>{{ r.attendance_percentage }}%</td>
+            </tr>
+            {% endfor %}
+            <tr class="grand-total-row">
+                <td style="text-align: left;">SCHOOL TOTALS</td>
+                <td>{{ grand_total.rb }}</td>
+                <td>{{ grand_total.rg }}</td>
+                <td>{{ grand_total.b }}</td>
+                <td>{{ grand_total.g }}</td>
+                <td>{{ grand_total.pb }}</td>
+                <td>{{ grand_total.pg }}</td>
+                <td>{{ grand_total.tb }}</td>
+                <td>{{ grand_total.tg }}</td>
+                <td>{{ school_present_pct }}%</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="signature-section">
+        <div class="sig-box">
+            <div class="line">Head of School Name:________________________________________________</div>
+        </div>
+        <div class="sig-box" style="float: right;">
+            <div class="line">Head of School Signature:_________________________</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Generated by Mwandet Digital | 
+        <strong>Last Updated:</strong> {% now "d M Y, H:i" %} | 
+        User: {{ user.username }}
+    </div>
+
+</body>
+</html>

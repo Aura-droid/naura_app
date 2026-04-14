@@ -1,0 +1,209 @@
+{% extends "attendance/base.html" %}
+
+{% block content %}
+<div class="container mt-4 pb-5">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">{{ template.name }}</h2>
+            <p class="text-muted mb-0">
+                Sheet: {{ template.sheet_name|default:"-" }} · Students: {{ template.students.count }} · Subjects: {{ template.subjects.count }}
+            </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'result_template_dashboard' %}" class="btn btn-outline-secondary">Back</a>
+            <button type="button" class="btn btn-success" id="share-missing-whatsapp-btn">
+                <i class="bi bi-whatsapp me-2"></i>Send Reminder via WhatsApp
+            </button>
+            {% if analysis_ready %}
+                <a href="{% url 'result_template_analysis' template.id %}" class="btn btn-outline-primary">
+                    <i class="bi bi-bar-chart-line me-2"></i>Show Analysis
+                </a>
+            {% endif %}
+            <a href="{% url 'export_result_template_excel' template.id %}" class="btn btn-success">
+                <i class="bi bi-file-earmark-excel me-2"></i>Export Excel
+            </a>
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteTemplateModal">
+                <i class="bi bi-trash me-2"></i>Delete Template
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="d-flex gap-2 flex-wrap mb-4">
+        <a href="{% url 'result_template_detail' template.id %}" class="btn {% if status_filter == 'all' %}btn-dark{% else %}btn-outline-dark{% endif %} btn-sm">All Subjects</a>
+        <a href="{% url 'result_template_detail' template.id %}?status=pending" class="btn {% if status_filter == 'pending' %}btn-danger{% else %}btn-outline-danger{% endif %} btn-sm">Pending</a>
+        <a href="{% url 'result_template_detail' template.id %}?status=in_progress" class="btn {% if status_filter == 'in_progress' %}btn-warning text-dark{% else %}btn-outline-warning{% endif %} btn-sm">In Progress</a>
+        <a href="{% url 'result_template_detail' template.id %}?status=submitted" class="btn {% if status_filter == 'submitted' %}btn-success{% else %}btn-outline-success{% endif %} btn-sm">Submitted</a>
+    </div>
+
+    {% if template.status == 'open' %}
+        {% with pending_count=all_subject_rows|length %}
+        {% endwith %}
+        <div class="alert alert-warning border-0 shadow-sm">
+            <strong>This template is still open.</strong>
+            Review the subject status table below and send reminders for any pending submissions.
+        </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h4 class="mb-3">Template Status</h4>
+                    <form method="post" action="{% url 'update_result_template_status' template.id %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            {{ status_form.status }}
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Update Status</button>
+                    </form>
+                    <hr>
+                    <p class="small text-muted mb-2">Uploaded: {{ template.created_at|date:"d M Y H:i" }}</p>
+                    <p class="small text-muted mb-2">Opened: {{ template.opened_at|date:"d M Y H:i"|default:"-" }}</p>
+                    <p class="small text-muted mb-0">Closed: {{ template.closed_at|date:"d M Y H:i"|default:"-" }}</p>
+                    {% if template.processing_error %}
+                        <div class="alert alert-danger mt-3 mb-0 small">{{ template.processing_error }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h4 class="mb-3">Subject Progress</h4>
+                    {% if subject_rows %}
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Subject</th>
+                                        <th>Status</th>
+                                        <th>Entered</th>
+                                        <th>Final</th>
+                                        <th>Students</th>
+                                        <th>Last Update</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in subject_rows %}
+                                        <tr>
+                                            <td>{{ row.subject.name }}</td>
+                                            <td>
+                                                <span class="badge {% if row.status_class == 'success' %}bg-success{% elif row.status_class == 'warning' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                                    {{ row.status_label }}
+                                                </span>
+                                                {% if row.pending_count and row.status_label != "Submitted" %}
+                                                    <div class="small text-muted mt-1">{{ row.pending_count }} still pending</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ row.entered_count }}</td>
+                                            <td>{{ row.final_count }}</td>
+                                            <td>{{ row.total_students }}</td>
+                                            <td>
+                                                {% if row.latest_updated_by %}
+                                                    <div class="small">{{ row.latest_updated_by }}</div>
+                                                    <div class="small text-muted">{{ row.latest_updated_at|date:"d M Y H:i" }}</div>
+                                                {% else %}
+                                                    <span class="small text-muted">No updates yet</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No subjects were detected in this template yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteTemplateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Delete Template</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">You are about to delete <strong>{{ template.name }}</strong>.</p>
+                <p class="text-muted small mb-0">This will remove the template, student rows, subject rows, and submitted entries linked to it.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'delete_result_template' template.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Yes, Delete Template</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const shareButton = document.getElementById('share-missing-whatsapp-btn');
+        if (!shareButton) {
+            return;
+        }
+
+        const subjectRows = [
+            {% for row in all_subject_rows %}
+                {
+                    name: '{{ row.subject.name|escapejs }}',
+                    status: '{{ row.status_label|escapejs }}',
+                    finalCount: {{ row.final_count|default:0 }},
+                    totalStudents: {{ row.total_students|default:0 }},
+                    pendingCount: {{ row.pending_count|default:0 }}
+                }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        function buildReminderMessage() {
+            const pendingRows = subjectRows.filter(row => row.status !== 'Submitted');
+            if (!pendingRows.length) {
+                return [
+                    '*Mwandet Digital Reminder*',
+                    '',
+                    `All subjects for *{{ template.name|escapejs }}* have already been submitted.`
+                ].join('\n');
+            }
+
+            const lines = [
+                '*Mwandet Digital Reminder*',
+                '',
+                `The following subjects have not yet been fully submitted for *{{ template.name|escapejs }}*:`,
+                ''
+            ];
+
+            pendingRows.forEach((row, index) => {
+                lines.push(
+                    `${index + 1}. ${row.name} - ${row.status} (${row.finalCount}/${row.totalStudents} final, ${row.pendingCount} pending)`
+                );
+            });
+
+            lines.push('');
+            lines.push('Teachers are kindly reminded to complete their submissions while this template is still open.');
+            lines.push('');
+            lines.push('_Shared from the Academic Office portal._');
+
+            return lines.join('\n');
+        }
+
+        shareButton.addEventListener('click', function () {
+            const message = buildReminderMessage();
+            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+        });
+    })();
+</script>
+{% endblock %}

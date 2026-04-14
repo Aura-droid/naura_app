@@ -1,0 +1,82 @@
+{% extends "attendance/base.html" %}
+
+{% block content %}
+<div class="container mt-4 pb-5">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">{{ subject.name }} Analysis</h2>
+            <p class="text-muted mb-0">{{ template.name }} · current saved marks split by gender.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'teacher_result_entry' template.id subject.id %}" class="btn btn-outline-secondary">Back to Subject</a>
+            <a href="{% url 'export_teacher_subject_analysis_pdf' template.id subject.id %}" class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark-pdf me-2"></i>Export Analysis PDF
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-info border-0 shadow-sm">
+        <strong>Grading note.</strong> This analysis follows the grade logic already built into the uploaded template workbook.
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h4 class="mb-0 fw-bold text-dark">{{ subject.name }}</h4>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle mb-0 text-center">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Gender</th>
+                            <th>A</th>
+                            <th>B</th>
+                            <th>C</th>
+                            <th>D</th>
+                            <th>F</th>
+                            <th>ABS</th>
+                            <th>INC</th>
+                            <th>Blank</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fw-semibold">Male</td>
+                            <td>{{ analysis_row.male.A }}</td>
+                            <td>{{ analysis_row.male.B }}</td>
+                            <td>{{ analysis_row.male.C }}</td>
+                            <td>{{ analysis_row.male.D }}</td>
+                            <td>{{ analysis_row.male.F }}</td>
+                            <td>{{ analysis_row.male.ABS }}</td>
+                            <td>{{ analysis_row.male.INC }}</td>
+                            <td>{{ analysis_row.male.BLANK }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-semibold">Female</td>
+                            <td>{{ analysis_row.female.A }}</td>
+                            <td>{{ analysis_row.female.B }}</td>
+                            <td>{{ analysis_row.female.C }}</td>
+                            <td>{{ analysis_row.female.D }}</td>
+                            <td>{{ analysis_row.female.F }}</td>
+                            <td>{{ analysis_row.female.ABS }}</td>
+                            <td>{{ analysis_row.female.INC }}</td>
+                            <td>{{ analysis_row.female.BLANK }}</td>
+                        </tr>
+                        <tr class="table-light fw-semibold">
+                            <td>Total</td>
+                            <td>{{ analysis_row.total.A }}</td>
+                            <td>{{ analysis_row.total.B }}</td>
+                            <td>{{ analysis_row.total.C }}</td>
+                            <td>{{ analysis_row.total.D }}</td>
+                            <td>{{ analysis_row.total.F }}</td>
+                            <td>{{ analysis_row.total.ABS }}</td>
+                            <td>{{ analysis_row.total.INC }}</td>
+                            <td>{{ analysis_row.total.BLANK }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline | Mwandet Digital</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #edf4ff 0%, #f8fafc 100%);
+            color: #1f2937;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .offline-card {
+            max-width: 460px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+            padding: 32px 28px;
+            text-align: center;
+        }
+        .offline-card img {
+            width: 84px;
+            height: 84px;
+            object-fit: contain;
+            margin-bottom: 18px;
+        }
+        .offline-card h1 {
+            margin: 0 0 12px;
+            font-size: 1.8rem;
+            color: #0d3b66;
+        }
+        .offline-card p {
+            margin: 0 0 18px;
+            line-height: 1.6;
+            color: #52606d;
+        }
+        .offline-actions a,
+        .offline-actions button {
+            display: inline-block;
+            margin: 6px;
+            padding: 12px 18px;
+            border-radius: 999px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .primary-btn {
+            background: #0d6efd;
+            color: white;
+        }
+        .secondary-btn {
+            background: #e5eefc;
+            color: #0d3b66;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-card">
+        <img src="{% static 'assets/img/md-app-icon.png' %}" alt="MD icon">
+        <h1>You are offline</h1>
+        <p>The portal cannot reach the internet right now. Check your connection, then try again.</p>
+        <p>If you already installed the app, reopen it when the network comes back and continue working.</p>
+        <div class="offline-actions">
+            <button class="primary-btn" type="button" onclick="window.location.reload()">Try Again</button>
+            <a class="secondary-btn" href="{% url 'home' %}">Go Home</a>
+        </div>
+    </div>
+</body>
+</html>

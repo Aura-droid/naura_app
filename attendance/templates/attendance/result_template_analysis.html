@@ -1,0 +1,87 @@
+{% extends "attendance/base.html" %}
+
+{% block content %}
+<div class="container mt-4 pb-5">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">{{ template.name }} Analysis</h2>
+            <p class="text-muted mb-0">Subject-by-subject grade summary split by gender for submitted subjects.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'result_template_detail' template.id %}" class="btn btn-outline-secondary">Back to Template</a>
+            <a href="{% url 'export_result_template_analysis_pdf' template.id %}" class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark-pdf me-2"></i>Export Analysis PDF
+            </a>
+            <a href="{% url 'export_result_template_excel' template.id %}" class="btn btn-success">
+                <i class="bi bi-file-earmark-excel me-2"></i>Export Excel
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-info border-0 shadow-sm">
+        <strong>Grading note.</strong> This report reads the grade lookup logic from the uploaded template, so the analysis follows the template's own A, B, C, D, and F ranges.
+    </div>
+
+    {% for row in analysis_rows %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h4 class="mb-0 fw-bold text-dark">{{ row.subject.name }}</h4>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0 text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Gender</th>
+                                <th>A</th>
+                                <th>B</th>
+                                <th>C</th>
+                                <th>D</th>
+                                <th>F</th>
+                                <th>ABS</th>
+                                <th>INC</th>
+                                <th>Blank</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="fw-semibold">Male</td>
+                                <td>{{ row.male.A }}</td>
+                                <td>{{ row.male.B }}</td>
+                                <td>{{ row.male.C }}</td>
+                                <td>{{ row.male.D }}</td>
+                                <td>{{ row.male.F }}</td>
+                                <td>{{ row.male.ABS }}</td>
+                                <td>{{ row.male.INC }}</td>
+                                <td>{{ row.male.BLANK }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold">Female</td>
+                                <td>{{ row.female.A }}</td>
+                                <td>{{ row.female.B }}</td>
+                                <td>{{ row.female.C }}</td>
+                                <td>{{ row.female.D }}</td>
+                                <td>{{ row.female.F }}</td>
+                                <td>{{ row.female.ABS }}</td>
+                                <td>{{ row.female.INC }}</td>
+                                <td>{{ row.female.BLANK }}</td>
+                            </tr>
+                            <tr class="table-light fw-semibold">
+                                <td>Total</td>
+                                <td>{{ row.total.A }}</td>
+                                <td>{{ row.total.B }}</td>
+                                <td>{{ row.total.C }}</td>
+                                <td>{{ row.total.D }}</td>
+                                <td>{{ row.total.F }}</td>
+                                <td>{{ row.total.ABS }}</td>
+                                <td>{{ row.total.INC }}</td>
+                                <td>{{ row.total.BLANK }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,473 @@
+{% extends "attendance/base.html" %}
+
+{% block content %}
+<div class="container mt-4 pb-5">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">{{ template.name }}</h2>
+            <p class="text-muted mb-0">{{ subject.name }} · {{ rows|length }} students</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'teacher_result_hub' %}" class="btn btn-outline-secondary">Back</a>
+            {% if analysis_available %}
+                <a href="{% url 'teacher_subject_analysis' template.id subject.id %}" class="btn btn-outline-primary">
+                    <i class="bi bi-bar-chart-line me-2"></i>View Subject Analysis
+                </a>
+                <a href="{% url 'export_teacher_subject_analysis_pdf' template.id subject.id %}" class="btn btn-outline-success">
+                    <i class="bi bi-file-earmark-pdf me-2"></i>Export Analysis PDF
+                </a>
+            {% endif %}
+            {% if can_edit %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">Open for editing</span>
+            {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border px-3 py-2">Closed</span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if can_access_academic_office or can_access_management %}
+        <div class="d-flex gap-2 flex-wrap mb-4">
+            {% if can_access_academic_office %}
+                <a href="{% url 'result_template_dashboard' %}" class="btn btn-outline-warning btn-sm">
+                    <i class="bi bi-journal-check me-2"></i>Academic Office Dashboard
+                </a>
+            {% endif %}
+            {% if can_access_management %}
+                <a href="{% url 'master_dashboard' %}" class="btn btn-outline-dark btn-sm">
+                    <i class="bi bi-speedometer2 me-2"></i>Management Dashboard
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% if can_edit and subject_progress and subject_progress.pending_count %}
+        <div class="alert alert-warning border-0 shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <strong>{{ subject.name }}</strong> is still pending.
+                {{ subject_progress.pending_count }} candidate{{ subject_progress.pending_count|pluralize }} still need final submission.
+            </div>
+            <span class="small text-muted">Autosave is on</span>
+        </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-4">
+                    <label for="candidate-search" class="form-label small fw-bold text-uppercase text-muted">Find Candidate</label>
+                    <input type="text" id="candidate-search" class="form-control" placeholder="Search candidate number">
+                </div>
+                <div class="col-lg-4">
+                    <label for="bulk-paste" class="form-label small fw-bold text-uppercase text-muted">Bulk Paste</label>
+                    <textarea id="bulk-paste" class="form-control" rows="2" placeholder="Paste marks column or lines like 0051 20"></textarea>
+                </div>
+                <div class="col-lg-4 d-grid">
+                    <button type="button" class="btn btn-outline-primary" id="apply-bulk-paste" {% if not can_edit %}disabled{% endif %}>
+                        Apply Bulk Paste
+                    </button>
+                </div>
+            </div>
+            <div class="small text-muted mt-2">
+                Paste either one score per line in the same candidate order, or lines like <code>0051 20</code>.
+            </div>
+            <div class="mt-3">
+                <button
+                    class="btn btn-sm btn-outline-secondary"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#bulkPasteHelp"
+                    aria-expanded="false"
+                    aria-controls="bulkPasteHelp"
+                >
+                    <i class="bi bi-info-circle me-2"></i>How Bulk Paste Works
+                </button>
+                <div class="collapse mt-3" id="bulkPasteHelp">
+                    <div class="p-3 rounded-3 border bg-light">
+                        <div class="fw-semibold text-dark mb-2">How Bulk Paste Works</div>
+                        <div class="small text-muted mb-2">
+                            You can paste marks in two simple ways, then click <strong>Apply Bulk Paste</strong>.
+                        </div>
+                        <div class="small mb-2">
+                            <strong>1. One mark per line:</strong> use this when your marks are already in the same order as the candidate numbers on this page.
+                        </div>
+                        <pre class="small bg-white border rounded p-2 mb-2"><code>20
+31
+45
+ABS
+28</code></pre>
+                        <div class="small mb-2">
+                            <strong>2. Candidate number and mark together:</strong> use this when the list is not in order.
+                        </div>
+                        <pre class="small bg-white border rounded p-2 mb-3"><code>0051 20
+0052 31
+0053 ABS
+0054 45</code></pre>
+                        <div class="fw-semibold text-dark mb-2">Real Examples</div>
+                        <div class="small mb-2">
+                            <strong>Example 1:</strong> copied from WhatsApp as a clean column.
+                        </div>
+                        <pre class="small bg-white border rounded p-2 mb-2"><code>12
+18
+25
+30
+41</code></pre>
+                        <div class="small mb-2">
+                            <strong>Example 2:</strong> copied from notes with candidate numbers.
+                        </div>
+                        <pre class="small bg-white border rounded p-2 mb-2"><code>0101 55
+0102 61
+0103 48
+0104 ABS</code></pre>
+                        <div class="small mb-2">
+                            <strong>Example 3:</strong> mixed real marks for quick entry.
+                        </div>
+                        <pre class="small bg-white border rounded p-2 mb-0"><code>0231 67
+0232 74
+0233 INC
+0234 39
+0235 80</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="summary-chip">
+                        <small class="text-muted d-block">Entered</small>
+                        <strong id="entered-count">{{ subject_progress.entered_count|default:0 }}</strong>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="summary-chip">
+                        <small class="text-muted d-block">Blank</small>
+                        <strong id="blank-count">{{ subject_progress.pending_count|default:rows|length }}</strong>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="summary-chip">
+                        <small class="text-muted d-block">Status</small>
+                        <strong id="status-label">{{ subject_progress.status_label|default:"Pending" }}</strong>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="summary-chip">
+                        <small class="text-muted d-block">Last Autosave</small>
+                        <strong id="autosave-status">Not yet</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <form method="post" id="results-form" data-autosave-url="{% url 'autosave_result_entry' template.id subject.id %}">
+                {% csrf_token %}
+                {{ form }}
+                <div class="p-3 border-bottom bg-light">
+                    <p class="mb-0 small text-muted">Use numbers from 0 to 100. You can also enter <strong>ABS</strong>, <strong>INC</strong>, or leave the box blank.</p>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="min-width: 110px;">Candidate No.</th>
+                                <th style="min-width: 180px;">Score</th>
+                                <th style="min-width: 120px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body">
+                            {% for row in rows %}
+                                <tr class="result-row" data-candidate="{{ row.student.candidate_no }}">
+                                    <td class="candidate-label">{{ row.student.candidate_no }}</td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            name="score_{{ row.student.id }}"
+                                            value="{{ row.score }}"
+                                            class="form-control score-input {% if not row.score %}score-blank{% endif %}"
+                                            placeholder="e.g. 67"
+                                            data-candidate="{{ row.student.candidate_no }}"
+                                            {% if not can_edit %}disabled{% endif %}
+                                        >
+                                    </td>
+                                    <td>
+                                        <span class="badge score-state {% if row.is_final %}bg-success{% elif row.score %}bg-warning text-dark{% else %}bg-light text-dark border{% endif %}">
+                                            {% if row.is_final %}Final{% elif row.score %}Draft{% else %}Blank{% endif %}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if can_edit %}
+                    <div class="sticky-action-bar p-3 border-top bg-white d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                        <div class="small text-muted" id="draft-hint">Draft changes save automatically while you type.</div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-outline-primary" id="save-draft-btn">
+                                Save Draft
+                            </button>
+                            <button type="button" class="btn btn-primary" id="confirm-submit-btn">
+                                Confirm and Send
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .summary-chip {
+        background: #f8fafc;
+        border: 1px solid #e9ecef;
+        border-radius: 14px;
+        padding: 1rem;
+        height: 100%;
+    }
+    .sticky-action-bar {
+        position: sticky;
+        bottom: 0;
+        z-index: 20;
+        box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
+    }
+    .score-blank {
+        background: #fff8e1;
+        border-color: #ffe08a;
+    }
+    .score-blank.score-required {
+        background: #fff1f0;
+        border-color: #f5a3a3;
+    }
+    .result-row.row-hidden {
+        display: none;
+    }
+    @media (max-width: 768px) {
+        .sticky-action-bar {
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+        }
+    }
+</style>
+
+{% if can_edit %}
+<div class="modal fade" id="submitConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Confirm Submission</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">You are about to submit <strong>{{ subject.name }}</strong>.</p>
+                <div class="rounded-3 bg-light border p-3">
+                    <div><strong>Filled:</strong> <span id="confirm-filled-count">0</span></div>
+                    <div><strong>Blank:</strong> <span id="confirm-blank-count">0</span></div>
+                </div>
+                <p class="text-muted small mt-3 mb-0">Blank score boxes are highlighted so you can review them before sending final marks.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="modal-final-submit-btn">Yes, Submit Final Marks</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if can_edit %}
+<script>
+    (function () {
+        const form = document.getElementById('results-form');
+        const searchInput = document.getElementById('candidate-search');
+        const bulkPaste = document.getElementById('bulk-paste');
+        const applyBulkPasteBtn = document.getElementById('apply-bulk-paste');
+        const saveDraftBtn = document.getElementById('save-draft-btn');
+        const confirmSubmitBtn = document.getElementById('confirm-submit-btn');
+        const submitModeInput = document.getElementById('id_submit_mode');
+        const autosaveUrl = form.dataset.autosaveUrl;
+        const csrfToken = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        const scoreInputs = Array.from(form.querySelectorAll('.score-input'));
+        const rows = Array.from(document.querySelectorAll('.result-row'));
+        const enteredCountEl = document.getElementById('entered-count');
+        const blankCountEl = document.getElementById('blank-count');
+        const statusLabelEl = document.getElementById('status-label');
+        const autosaveStatusEl = document.getElementById('autosave-status');
+        const confirmFilledCountEl = document.getElementById('confirm-filled-count');
+        const confirmBlankCountEl = document.getElementById('confirm-blank-count');
+        const modalFinalSubmitBtn = document.getElementById('modal-final-submit-btn');
+        const confirmModal = new bootstrap.Modal(document.getElementById('submitConfirmModal'));
+        let dirty = false;
+        let autosaveTimer = null;
+        let autosaveInFlight = false;
+
+        function normalizeValue(value) {
+            return (value || '').trim().toUpperCase();
+        }
+
+        function refreshRowState(input) {
+            const value = normalizeValue(input.value);
+            input.value = value;
+            input.classList.toggle('score-blank', value === '');
+            input.classList.remove('score-required');
+            const badge = input.closest('tr').querySelector('.score-state');
+            if (value === '') {
+                badge.className = 'badge score-state bg-light text-dark border';
+                badge.textContent = 'Blank';
+            } else {
+                badge.className = 'badge score-state bg-warning text-dark';
+                badge.textContent = 'Draft';
+            }
+        }
+
+        function refreshSummary() {
+            const filled = scoreInputs.filter(input => normalizeValue(input.value) !== '').length;
+            const blank = scoreInputs.length - filled;
+            enteredCountEl.textContent = filled;
+            blankCountEl.textContent = blank;
+            statusLabelEl.textContent = blank === 0 ? 'Ready to Submit' : (filled > 0 ? 'In Progress' : 'Pending');
+            return { filled, blank };
+        }
+
+        function scheduleAutosave() {
+            dirty = true;
+            autosaveStatusEl.textContent = 'Unsaved changes';
+            if (autosaveTimer) {
+                window.clearTimeout(autosaveTimer);
+            }
+            autosaveTimer = window.setTimeout(runAutosave, 2500);
+        }
+
+        async function runAutosave() {
+            if (!dirty || autosaveInFlight) {
+                return;
+            }
+            autosaveInFlight = true;
+            const payload = new FormData();
+            scoreInputs.forEach(input => payload.append(input.name, input.value));
+            try {
+                const response = await fetch(autosaveUrl, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken },
+                    body: payload,
+                });
+                const data = await response.json();
+                if (!response.ok || !data.ok) {
+                    throw new Error(data.error || 'Autosave failed');
+                }
+                dirty = false;
+                autosaveStatusEl.textContent = 'Saved at ' + data.saved_at;
+                enteredCountEl.textContent = data.entered_count;
+                blankCountEl.textContent = data.pending_count;
+                statusLabelEl.textContent = data.status_label;
+            } catch (error) {
+                autosaveStatusEl.textContent = 'Autosave failed';
+            } finally {
+                autosaveInFlight = false;
+            }
+        }
+
+        function applySearch() {
+            const term = normalizeValue(searchInput.value);
+            rows.forEach(row => {
+                const matches = !term || row.dataset.candidate.includes(term);
+                row.classList.toggle('row-hidden', !matches);
+            });
+        }
+
+        function applyBulkPaste() {
+            const text = bulkPaste.value.trim();
+            if (!text) {
+                return;
+            }
+            const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+            const byCandidate = new Map(scoreInputs.map(input => [input.dataset.candidate, input]));
+            const sequentialInputs = scoreInputs.filter(input => !input.closest('tr').classList.contains('row-hidden'));
+            const pairPattern = /^(\d+)\s+([A-Za-z0-9.\-]+)$/;
+            let usedPairFormat = false;
+
+            lines.forEach((line, index) => {
+                const pairMatch = line.match(pairPattern);
+                if (pairMatch) {
+                    usedPairFormat = true;
+                    const input = byCandidate.get(pairMatch[1]);
+                    if (input) {
+                        input.value = pairMatch[2];
+                        refreshRowState(input);
+                    }
+                    return;
+                }
+                if (!usedPairFormat && sequentialInputs[index]) {
+                    sequentialInputs[index].value = line;
+                    refreshRowState(sequentialInputs[index]);
+                }
+            });
+
+            refreshSummary();
+            scheduleAutosave();
+        }
+
+        searchInput.addEventListener('input', applySearch);
+        applyBulkPasteBtn.addEventListener('click', applyBulkPaste);
+
+        scoreInputs.forEach(input => {
+            input.addEventListener('input', () => {
+                refreshRowState(input);
+                refreshSummary();
+                scheduleAutosave();
+            });
+            input.addEventListener('blur', () => refreshRowState(input));
+        });
+
+        saveDraftBtn.addEventListener('click', () => {
+            submitModeInput.value = 'draft';
+        });
+
+        confirmSubmitBtn.addEventListener('click', () => {
+            const { filled, blank } = refreshSummary();
+            scoreInputs.forEach(input => {
+                const isBlank = normalizeValue(input.value) === '';
+                input.classList.toggle('score-required', isBlank);
+            });
+            confirmFilledCountEl.textContent = filled;
+            confirmBlankCountEl.textContent = blank;
+            confirmModal.show();
+        });
+
+        modalFinalSubmitBtn.addEventListener('click', () => {
+            submitModeInput.value = 'final';
+            confirmModal.hide();
+            form.submit();
+        });
+
+        form.addEventListener('submit', () => {
+            if (submitModeInput.value === 'draft') {
+                autosaveStatusEl.textContent = 'Saving draft...';
+            }
+        });
+
+        window.addEventListener('beforeunload', event => {
+            if (!dirty) {
+                return;
+            }
+            event.preventDefault();
+            event.returnValue = '';
+        });
+
+        refreshSummary();
+    })();
+</script>
+{% endif %}
+{% endblock %}
