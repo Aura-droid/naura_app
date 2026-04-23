@@ -4,10 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TOD Daily Report | Mwandet Digital</title>
+    <title>TOD Daily Report | {{ school_display_name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    {% if active_school and active_school.logo_without_background %}
+    <link rel="icon" href="{{ active_school.logo_without_background.url }}" type="image/png">
+    {% else %}
     <link rel="icon" href="{% static 'assets/img/md-app-icon.png' %}" type="image/png">
+    {% endif %}
     <style>
         html, body {
             overflow-x: hidden;
@@ -54,14 +58,14 @@
     <div class="row justify-content-center">
         <div class="col-lg-9">
             <div class="container mt-3">
-                <a href="{% url 'teacher_hub' %}" class="btn btn-outline-secondary btn-sm shadow-sm mb-3">
+                <a href="{% if active_school %}{% url 'school_teacher_hub' active_school.slug %}{% else %}{% url 'teacher_hub' %}{% endif %}" class="btn btn-outline-secondary btn-sm shadow-sm mb-3">
                     <i class="bi bi-arrow-left-circle me-1"></i> Back to Hub
                 </a>
             </div>
             <div class="card shadow border-0 mb-4">
                 <div class="card-header bg-primary text-white p-4">
                     <h3 class="mb-0"><i class="bi bi-clipboard-check"></i> TOD Daily Report</h3>
-                    <p class="mb-0 opacity-75">Mwandet Digital Official Log</p>
+                    <p class="mb-0 opacity-75">{{ school_display_name }} Official Log</p>
                 </div>
             </div>
             {% if form.errors %}

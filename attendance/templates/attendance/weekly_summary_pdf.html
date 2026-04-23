@@ -19,7 +19,7 @@
 <body>
     <div class="header">
         <img src="{{ logo_path }}" width="100" height="100">
-        <div class="school-name">MWANDET DIGITAL</div>
+        <div class="school-name">{{ school_name }}</div>
         <div style="font-weight: bold;">WEEKLY TEACHER ON DUTY (TOD) EXECUTIVE SUMMARY</div>
         <div>Period: {{ start_date|date:"d M Y" }} — {{ end_date|date:"d M Y" }}</div>
     </div>
@@ -57,7 +57,7 @@
     </table>
 
     <div class="footer">
-        Generated on {% now "d/m/Y H:i" %} | Mwandet Digital
+        Generated on {% now "d/m/Y H:i" %} | {{ school_name }}
     </div>
 </body>
 </html>

@@ -4,15 +4,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mwandet Digital Portal</title>
-    <meta name="theme-color" content="#0d6efd">
+    <title>{% if use_platform_branding %}{{ platform_brand_name }}{% else %}{{ school_display_name }} Portal{% endif %}</title>
+    <meta name="theme-color" content="{% if use_platform_branding %}#0d6efd{% else %}{{ active_school.primary_color|default:'#0d6efd' }}{% endif %}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="MD Portal">
+    <meta name="apple-mobile-web-app-title" content="{% if use_platform_branding %}{{ platform_brand_short_name }}{% else %}{{ school_display_name }}{% endif %}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="icon" href="{% static 'assets/img/md-favicon.jpg' %}" type="image/jpeg">
-    <link rel="apple-touch-icon" href="{% static 'assets/img/md-app-icon.png' %}">
+    {% if use_platform_branding %}
+        <link rel="icon" href="{% static platform_brand_logo %}" type="image/jpeg">
+    {% elif active_school and active_school.logo_with_background %}
+        <link rel="icon" href="{{ active_school.logo_with_background.url }}" type="image/jpeg">
+    {% else %}
+        <link rel="icon" href="{% static 'assets/img/md-favicon.jpg' %}" type="image/jpeg">
+    {% endif %}
+    {% if use_platform_branding %}
+        <link rel="apple-touch-icon" href="{% static platform_brand_logo_no_bg %}">
+    {% elif active_school and active_school.logo_without_background %}
+        <link rel="apple-touch-icon" href="{{ active_school.logo_without_background.url }}">
+    {% else %}
+        <link rel="apple-touch-icon" href="{% static 'assets/img/md-app-icon.png' %}">
+    {% endif %}
     <link rel="manifest" href="{% url 'web_manifest' %}">
     <style>
         html, body {
@@ -137,16 +149,32 @@
 </head>
 <body class="bg-light">
 <div id="loader">
-    <img src="{% static 'assets/img/md-app-icon.png' %}" alt="Mwandet Digital Icon" class="loader-icon">
+    {% if use_platform_branding %}
+        <img src="{% static platform_brand_logo_no_bg %}" alt="{{ platform_brand_name }} Icon" class="loader-icon">
+    {% elif active_school and active_school.logo_without_background %}
+        <img src="{{ active_school.logo_without_background.url }}" alt="{{ school_display_name }} Icon" class="loader-icon">
+    {% else %}
+        <img src="{% static 'assets/img/md-app-icon.png' %}" alt="{{ school_display_name }} Icon" class="loader-icon">
+    {% endif %}
 </div>
 
 <header class="mb-4">
     <div class="ndi-hero shadow-sm">
-        <img src="{% static 'assets/img/mwandet-banner.jpeg' %}" class="ndi-hero-img" alt="Mwandet Students">
+        {% if use_platform_branding %}
+            <img src="{% static platform_brand_banner %}" class="ndi-hero-img" alt="{{ platform_brand_name }}">
+        {% elif active_school and active_school.banner_image %}
+            <img src="{{ active_school.banner_image.url }}" class="ndi-hero-img" alt="{{ school_display_name }}">
+        {% else %}
+            <img src="{% static 'assets/img/mwandet-banner.jpeg' %}" class="ndi-hero-img" alt="{{ school_display_name }}">
+        {% endif %}
         <div class="ndi-overlay-text text-white">
-            <div class="badge bg-warning text-dark mb-3 px-3 py-2">MD System v1.0</div>
-            <h1 class="fw-bold text-uppercase tracking-tight">Mwandet Digital</h1>
-            <p class="lead d-none d-md-block mb-0">Quality and Excellence</p>
+            <div class="badge bg-warning text-dark mb-3 px-3 py-2">{% if use_platform_branding %}{{ platform_brand_short_name }} System v1.0{% else %}{{ platform_short_name }} System v1.0{% endif %}</div>
+            <h1 class="fw-bold text-uppercase tracking-tight">{% if use_platform_branding %}{{ platform_brand_name }}{% else %}{{ school_display_name }}{% endif %}</h1>
+            {% if use_platform_branding %}
+                <p class="lead d-none d-md-block mb-0">Mother Platform</p>
+            {% elif active_school and active_school.slogan %}
+                <p class="lead d-none d-md-block mb-0">{{ active_school.slogan }}</p>
+            {% endif %}
         </div>
     </div>
 
@@ -157,7 +185,9 @@
                     <div>
                         <div class="fw-bold text-dark">{{ request.user.get_full_name|default:request.user.username }}</div>
                         <div class="small text-muted">
-                            {% if request.user.is_superuser %}
+                            {% if use_platform_branding and request.user.is_superuser %}
+                                Platform Super Admin
+                            {% elif request.user.is_superuser %}
                                 Superuser
                             {% else %}
                                 {{ request.user.groups.all|join:", "|default:"Portal User" }}
@@ -165,17 +195,28 @@
                         </div>
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
-                        <button type="button" id="install-app-btn" class="btn btn-success btn-sm nav-chip">
-                            <i class="bi bi-download me-1"></i>Install App
-                        </button>
-                        {% if can_access_teacher_hub %}
-                            <a href="{% url 'teacher_hub' %}" class="btn btn-outline-primary btn-sm nav-chip">Teacher Hub</a>
+                        {% if not use_platform_branding %}
+                            <button type="button" id="install-app-btn" class="btn btn-success btn-sm nav-chip">
+                                <i class="bi bi-download me-1"></i>Install App
+                            </button>
+                            {% if can_access_teacher_hub %}
+                                <a href="{% url 'teacher_hub' %}" class="btn btn-outline-primary btn-sm nav-chip">Teacher Hub</a>
+                            {% endif %}
+                            {% if can_access_academic_office %}
+                                <a href="{% url 'result_template_dashboard' %}" class="btn btn-outline-warning btn-sm nav-chip">Academic Office</a>
+                            {% endif %}
+                            {% if can_access_management %}
+                                <a href="{% url 'master_dashboard' %}" class="btn btn-outline-dark btn-sm nav-chip">Management</a>
+                            {% endif %}
                         {% endif %}
-                        {% if can_access_academic_office %}
-                            <a href="{% url 'result_template_dashboard' %}" class="btn btn-outline-warning btn-sm nav-chip">Academic Office</a>
-                        {% endif %}
-                        {% if can_access_management %}
-                            <a href="{% url 'master_dashboard' %}" class="btn btn-outline-dark btn-sm nav-chip">Management</a>
+                        {% if use_platform_branding %}
+                            <a href="{% url 'school_directory' %}" class="btn btn-outline-primary btn-sm nav-chip">Public Portal</a>
+                            {% if can_access_platform_admin %}
+                                <a href="{% url 'platform_school_dashboard' %}" class="btn btn-outline-success btn-sm nav-chip">Super Admin</a>
+                            {% endif %}
+                            <a href="{% url 'admin:index' %}" class="btn btn-outline-dark btn-sm nav-chip">Django Admin</a>
+                        {% elif can_access_platform_admin %}
+                            <a href="{% url 'platform_school_dashboard' %}" class="btn btn-outline-success btn-sm nav-chip">Schools</a>
                         {% endif %}
                         <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm nav-chip">Logout</a>
                     </div>
@@ -193,7 +234,7 @@
     <div id="installSuccessToast" class="toast align-items-center border-0 text-bg-success" role="status" aria-live="polite" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
-                <strong>App installed successfully.</strong> You can now open MD Portal straight from your desktop.
+                <strong>App installed successfully.</strong> You can now open {{ school_display_name }} straight from your desktop.
             </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>

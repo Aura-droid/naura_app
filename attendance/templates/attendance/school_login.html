@@ -1,0 +1,41 @@
+{% extends "attendance/base.html" %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center pb-5" style="min-height: 75vh;">
+    <div class="card shadow-lg border-0" style="width: 100%; max-width: 460px; border-radius: 18px;">
+        <div class="card-body p-5 text-center">
+            <div class="small text-muted mb-2">{{ platform_name }}</div>
+            <h2 class="text-primary fw-bold mb-2">{{ school_display_name }}</h2>
+            {% if active_school and active_school.slogan %}
+                <p class="text-muted mb-2">{{ active_school.slogan }}</p>
+            {% endif %}
+            <p class="text-muted mb-4">Log in with the account assigned to this school.</p>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} text-start small">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3 text-start">
+                    <label class="form-label small fw-bold">Username</label>
+                    {{ form.username }}
+                </div>
+                <div class="mb-4 text-start">
+                    <label class="form-label small fw-bold">Password</label>
+                    {{ form.password }}
+                </div>
+                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold shadow-sm">
+                    Login to {{ school_display_name }}
+                </button>
+            </form>
+
+            <a href="{% url 'school_directory' %}" class="btn btn-link mt-3 text-decoration-none">Choose another school</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

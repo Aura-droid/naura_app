@@ -25,9 +25,9 @@ def send_staff_reminder(message_text):
     payload = {
         "app_id": onesignal_app_id,
         "included_segments": ["All"], # Sends to everyone who has the app
-        "headings": {"en": "Mwandet Staff Reminder"},
+        "headings": {"en": "School Staff Reminder"},
         "contents": {"en": message_text},
-        "android_accent_color": "198754", # Mwandet success green
+        "android_accent_color": "198754", # Default portal accent
         "priority": 10
     }
 

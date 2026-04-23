@@ -6,7 +6,24 @@ from .models import (
     ResultStudent,
     ResultTemplate,
     ResultTemplateSubject,
+    School,
+    SchoolMembership,
 )
+
+
+@admin.register(School)
+class SchoolAdmin(admin.ModelAdmin):
+    list_display = ('display_name', 'initiative_short_name', 'website_domain', 'is_active', 'updated_at')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'portal_name', 'website_domain', 'support_email')
+    prepopulated_fields = {'slug': ('name',)}
+
+
+@admin.register(SchoolMembership)
+class SchoolMembershipAdmin(admin.ModelAdmin):
+    list_display = ('user', 'school', 'role', 'job_title', 'can_manage_school')
+    list_filter = ('school', 'role', 'can_manage_school')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'school__name')
 
 
 @admin.register(AttendanceRecord)

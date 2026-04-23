@@ -9,7 +9,7 @@
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a href="{% url 'result_template_detail' template.id %}" class="btn btn-outline-secondary">Back to Template</a>
-            <a href="{% url 'export_result_template_analysis_pdf' template.id %}" class="btn btn-outline-primary">
+            <a href="{% url 'export_result_template_analysis_pdf' template.id %}" class="btn btn-outline-primary analysis-delay-link" data-analysis-action="exporting the analysis PDF">
                 <i class="bi bi-file-earmark-pdf me-2"></i>Export Analysis PDF
             </a>
             <a href="{% url 'export_result_template_excel' template.id %}" class="btn btn-success">
@@ -27,7 +27,48 @@
             <div class="card-header bg-white py-3">
                 <h4 class="mb-0 fw-bold text-dark">{{ row.subject.name }}</h4>
             </div>
-            <div class="card-body p-0">
+            <div class="card-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="border rounded-3 p-3 h-100 bg-light">
+                            <div class="text-muted small text-uppercase fw-semibold mb-2">Boys</div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="badge text-bg-success">Pass (A-D)</span>
+                                <span class="fw-bold">{{ row.summary.M.pass_count }} / {{ row.summary.M.graded_total }} ({{ row.summary.M.pass_pct|floatformat:1 }}%)</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="badge text-bg-danger">Fail (F)</span>
+                                <span class="fw-bold">{{ row.summary.M.fail_count }} / {{ row.summary.M.graded_total }} ({{ row.summary.M.fail_pct|floatformat:1 }}%)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded-3 p-3 h-100 bg-light">
+                            <div class="text-muted small text-uppercase fw-semibold mb-2">Girls</div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="badge text-bg-success">Pass (A-D)</span>
+                                <span class="fw-bold">{{ row.summary.F.pass_count }} / {{ row.summary.F.graded_total }} ({{ row.summary.F.pass_pct|floatformat:1 }}%)</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="badge text-bg-danger">Fail (F)</span>
+                                <span class="fw-bold">{{ row.summary.F.fail_count }} / {{ row.summary.F.graded_total }} ({{ row.summary.F.fail_pct|floatformat:1 }}%)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded-3 p-3 h-100 bg-light">
+                            <div class="text-muted small text-uppercase fw-semibold mb-2">Overall</div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="badge text-bg-success">Pass (A-D)</span>
+                                <span class="fw-bold">{{ row.summary.TOTAL.pass_count }} / {{ row.summary.TOTAL.graded_total }} ({{ row.summary.TOTAL.pass_pct|floatformat:1 }}%)</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="badge text-bg-danger">Fail (F)</span>
+                                <span class="fw-bold">{{ row.summary.TOTAL.fail_count }} / {{ row.summary.TOTAL.graded_total }} ({{ row.summary.TOTAL.fail_pct|floatformat:1 }}%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-bordered align-middle mb-0 text-center">
                         <thead class="table-light">
@@ -84,4 +125,45 @@
         </div>
     {% endfor %}
 </div>
+
+<div class="modal fade" id="analysisDelayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Preparing Analysis</h5>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">The system is <span id="analysis-delay-action">preparing the analysis</span>.</p>
+                <p class="mb-0 text-muted">This may take up to 2 minutes because the workbook has to be loaded and processed first.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.addEventListener('load', function () {
+        const links = Array.from(document.querySelectorAll('.analysis-delay-link'));
+        const modalEl = document.getElementById('analysisDelayModal');
+        const actionEl = document.getElementById('analysis-delay-action');
+
+        if (!links.length || !window.bootstrap || !modalEl) {
+            return;
+        }
+
+        const modal = new bootstrap.Modal(modalEl);
+
+        links.forEach(link => {
+            link.addEventListener('click', event => {
+                event.preventDefault();
+                if (actionEl) {
+                    actionEl.textContent = link.dataset.analysisAction || 'preparing the analysis';
+                }
+                modal.show();
+                window.setTimeout(() => {
+                    window.location.href = link.href;
+                }, 350);
+            });
+        });
+    });
+</script>
 {% endblock %}

@@ -15,7 +15,7 @@
                 <i class="bi bi-whatsapp me-2"></i>Send Reminder via WhatsApp
             </button>
             {% if analysis_ready %}
-                <a href="{% url 'result_template_analysis' template.id %}" class="btn btn-outline-primary">
+                <a href="{% url 'result_template_analysis' template.id %}" class="btn btn-outline-primary analysis-delay-link" data-analysis-action="opening the template analysis">
                     <i class="bi bi-bar-chart-line me-2"></i>Show Analysis
                 </a>
             {% endif %}
@@ -150,10 +150,27 @@
     </div>
 </div>
 
+<div class="modal fade" id="analysisDelayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Preparing Analysis</h5>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">The system is <span id="analysis-delay-action">preparing the analysis</span>.</p>
+                <p class="mb-0 text-muted">This may take up to 2 minutes because the workbook has to be loaded and processed first.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     (function () {
         const shareButton = document.getElementById('share-missing-whatsapp-btn');
-        if (!shareButton) {
+        const analysisDelayLink = document.querySelector('.analysis-delay-link');
+        const analysisDelayModalEl = document.getElementById('analysisDelayModal');
+        const analysisDelayActionEl = document.getElementById('analysis-delay-action');
+        if (!shareButton && !analysisDelayLink) {
             return;
         }
 
@@ -173,14 +190,14 @@
             const pendingRows = subjectRows.filter(row => row.status !== 'Submitted');
             if (!pendingRows.length) {
                 return [
-                    '*Mwandet Digital Reminder*',
+                    '*{{ school_display_name|escapejs }} Reminder*',
                     '',
                     `All subjects for *{{ template.name|escapejs }}* have already been submitted.`
                 ].join('\n');
             }
 
             const lines = [
-                '*Mwandet Digital Reminder*',
+                '*{{ school_display_name|escapejs }} Reminder*',
                 '',
                 `The following subjects have not yet been fully submitted for *{{ template.name|escapejs }}*:`,
                 ''
@@ -200,10 +217,26 @@
             return lines.join('\n');
         }
 
-        shareButton.addEventListener('click', function () {
-            const message = buildReminderMessage();
-            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-        });
+        if (shareButton) {
+            shareButton.addEventListener('click', function () {
+                const message = buildReminderMessage();
+                window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+            });
+        }
+
+        if (analysisDelayLink && window.bootstrap && analysisDelayModalEl) {
+            const analysisDelayModal = new bootstrap.Modal(analysisDelayModalEl);
+            analysisDelayLink.addEventListener('click', function (event) {
+                event.preventDefault();
+                if (analysisDelayActionEl) {
+                    analysisDelayActionEl.textContent = analysisDelayLink.dataset.analysisAction || 'preparing the analysis';
+                }
+                analysisDelayModal.show();
+                window.setTimeout(() => {
+                    window.location.href = analysisDelayLink.href;
+                }, 350);
+            });
+        }
     })();
 </script>
 {% endblock %}

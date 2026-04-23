@@ -8,12 +8,12 @@
             <p class="text-muted mb-0">{{ subject.name }} · {{ rows|length }} students</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{% url 'teacher_result_hub' %}" class="btn btn-outline-secondary">Back</a>
+            <a href="{% if active_school %}{% url 'school_teacher_result_hub' active_school.slug %}{% else %}{% url 'teacher_result_hub' %}{% endif %}" class="btn btn-outline-secondary">Back</a>
             {% if analysis_available %}
-                <a href="{% url 'teacher_subject_analysis' template.id subject.id %}" class="btn btn-outline-primary">
+                <a href="{% if active_school %}{% url 'school_teacher_subject_analysis' active_school.slug template.id subject.id %}{% else %}{% url 'teacher_subject_analysis' template.id subject.id %}{% endif %}" class="btn btn-outline-primary analysis-delay-link" data-analysis-action="opening the subject analysis">
                     <i class="bi bi-bar-chart-line me-2"></i>View Subject Analysis
                 </a>
-                <a href="{% url 'export_teacher_subject_analysis_pdf' template.id subject.id %}" class="btn btn-outline-success">
+                <a href="{% if active_school %}{% url 'school_export_teacher_subject_analysis_pdf' active_school.slug template.id subject.id %}{% else %}{% url 'export_teacher_subject_analysis_pdf' template.id subject.id %}{% endif %}" class="btn btn-outline-success analysis-delay-link" data-analysis-action="exporting the analysis PDF">
                     <i class="bi bi-file-earmark-pdf me-2"></i>Export Analysis PDF
                 </a>
             {% endif %}
@@ -28,12 +28,12 @@
     {% if can_access_academic_office or can_access_management %}
         <div class="d-flex gap-2 flex-wrap mb-4">
             {% if can_access_academic_office %}
-                <a href="{% url 'result_template_dashboard' %}" class="btn btn-outline-warning btn-sm">
+                <a href="{% if active_school %}{% url 'school_result_template_dashboard' active_school.slug %}{% else %}{% url 'result_template_dashboard' %}{% endif %}" class="btn btn-outline-warning btn-sm">
                     <i class="bi bi-journal-check me-2"></i>Academic Office Dashboard
                 </a>
             {% endif %}
             {% if can_access_management %}
-                <a href="{% url 'master_dashboard' %}" class="btn btn-outline-dark btn-sm">
+                <a href="{% if active_school %}{% url 'school_master_dashboard' active_school.slug %}{% else %}{% url 'master_dashboard' %}{% endif %}" class="btn btn-outline-dark btn-sm">
                     <i class="bi bi-speedometer2 me-2"></i>Management Dashboard
                 </a>
             {% endif %}
@@ -171,7 +171,7 @@ ABS
 
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
-            <form method="post" id="results-form" data-autosave-url="{% url 'autosave_result_entry' template.id subject.id %}">
+            <form method="post" id="results-form" data-autosave-url="{% if active_school %}{% url 'school_autosave_result_entry' active_school.slug template.id subject.id %}{% else %}{% url 'autosave_result_entry' template.id subject.id %}{% endif %}">
                 {% csrf_token %}
                 {{ form }}
                 <div class="p-3 border-bottom bg-light">
@@ -226,6 +226,20 @@ ABS
                     </div>
                 {% endif %}
             </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="analysisDelayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Preparing Analysis</h5>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">The system is <span id="analysis-delay-action">preparing the analysis</span>.</p>
+                <p class="mb-0 text-muted">This may take up to 2 minutes because the workbook has to be loaded and processed first.</p>
+            </div>
         </div>
     </div>
 </div>
@@ -289,7 +303,7 @@ ABS
 
 {% if can_edit %}
 <script>
-    (function () {
+    window.addEventListener('load', function () {
         const form = document.getElementById('results-form');
         const searchInput = document.getElementById('candidate-search');
         const bulkPaste = document.getElementById('bulk-paste');
@@ -308,7 +322,17 @@ ABS
         const confirmFilledCountEl = document.getElementById('confirm-filled-count');
         const confirmBlankCountEl = document.getElementById('confirm-blank-count');
         const modalFinalSubmitBtn = document.getElementById('modal-final-submit-btn');
-        const confirmModal = new bootstrap.Modal(document.getElementById('submitConfirmModal'));
+        const confirmModalEl = document.getElementById('submitConfirmModal');
+        const analysisDelayLinks = Array.from(document.querySelectorAll('.analysis-delay-link'));
+        const analysisDelayModalEl = document.getElementById('analysisDelayModal');
+        const analysisDelayActionEl = document.getElementById('analysis-delay-action');
+
+        if (!form || !window.bootstrap || !confirmModalEl) {
+            return;
+        }
+
+        const confirmModal = new bootstrap.Modal(confirmModalEl);
+        const analysisDelayModal = analysisDelayModalEl ? new bootstrap.Modal(analysisDelayModalEl) : null;
         let dirty = false;
         let autosaveTimer = null;
         let autosaveInFlight = false;
@@ -466,8 +490,24 @@ ABS
             event.returnValue = '';
         });
 
+        analysisDelayLinks.forEach(link => {
+            link.addEventListener('click', event => {
+                if (!analysisDelayModal) {
+                    return;
+                }
+                event.preventDefault();
+                if (analysisDelayActionEl) {
+                    analysisDelayActionEl.textContent = link.dataset.analysisAction || 'preparing the analysis';
+                }
+                analysisDelayModal.show();
+                window.setTimeout(() => {
+                    window.location.href = link.href;
+                }, 350);
+            });
+        });
+
         refreshSummary();
-    })();
+    });
 </script>
 {% endif %}
 {% endblock %}

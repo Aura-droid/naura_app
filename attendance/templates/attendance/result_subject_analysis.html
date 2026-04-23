@@ -8,8 +8,8 @@
             <p class="text-muted mb-0">{{ template.name }} · current saved marks split by gender.</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{% url 'teacher_result_entry' template.id subject.id %}" class="btn btn-outline-secondary">Back to Subject</a>
-            <a href="{% url 'export_teacher_subject_analysis_pdf' template.id subject.id %}" class="btn btn-outline-primary">
+            <a href="{% if active_school %}{% url 'school_teacher_result_entry' active_school.slug template.id subject.id %}{% else %}{% url 'teacher_result_entry' template.id subject.id %}{% endif %}" class="btn btn-outline-secondary">Back to Subject</a>
+            <a href="{% if active_school %}{% url 'school_export_teacher_subject_analysis_pdf' active_school.slug template.id subject.id %}{% else %}{% url 'export_teacher_subject_analysis_pdf' template.id subject.id %}{% endif %}" class="btn btn-outline-primary analysis-delay-link" data-analysis-action="exporting the analysis PDF">
                 <i class="bi bi-file-earmark-pdf me-2"></i>Export Analysis PDF
             </a>
         </div>
@@ -17,6 +17,54 @@
 
     <div class="alert alert-info border-0 shadow-sm">
         <strong>Grading note.</strong> This analysis follows the grade logic already built into the uploaded template workbook.
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase fw-semibold mb-2">Boys</div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="badge text-bg-success">Pass (A-D)</span>
+                        <span class="fw-bold">{{ analysis_row.summary.M.pass_count }} / {{ analysis_row.summary.M.graded_total }} ({{ analysis_row.summary.M.pass_pct|floatformat:1 }}%)</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="badge text-bg-danger">Fail (F)</span>
+                        <span class="fw-bold">{{ analysis_row.summary.M.fail_count }} / {{ analysis_row.summary.M.graded_total }} ({{ analysis_row.summary.M.fail_pct|floatformat:1 }}%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase fw-semibold mb-2">Girls</div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="badge text-bg-success">Pass (A-D)</span>
+                        <span class="fw-bold">{{ analysis_row.summary.F.pass_count }} / {{ analysis_row.summary.F.graded_total }} ({{ analysis_row.summary.F.pass_pct|floatformat:1 }}%)</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="badge text-bg-danger">Fail (F)</span>
+                        <span class="fw-bold">{{ analysis_row.summary.F.fail_count }} / {{ analysis_row.summary.F.graded_total }} ({{ analysis_row.summary.F.fail_pct|floatformat:1 }}%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase fw-semibold mb-2">Overall</div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="badge text-bg-success">Pass (A-D)</span>
+                        <span class="fw-bold">{{ analysis_row.summary.TOTAL.pass_count }} / {{ analysis_row.summary.TOTAL.graded_total }} ({{ analysis_row.summary.TOTAL.pass_pct|floatformat:1 }}%)</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="badge text-bg-danger">Fail (F)</span>
+                        <span class="fw-bold">{{ analysis_row.summary.TOTAL.fail_count }} / {{ analysis_row.summary.TOTAL.graded_total }} ({{ analysis_row.summary.TOTAL.fail_pct|floatformat:1 }}%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="card border-0 shadow-sm">
@@ -78,5 +126,94 @@
             </div>
         </div>
     </div>
+
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold text-dark">Pass and Fail Summary</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Group</th>
+                            <th class="text-center">Graded Scripts (A-F)</th>
+                            <th class="text-center text-success">Pass Count</th>
+                            <th class="text-center text-success">Pass %</th>
+                            <th class="text-center text-danger">Fail Count</th>
+                            <th class="text-center text-danger">Fail %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fw-semibold">Boys</td>
+                            <td class="text-center">{{ analysis_row.summary.M.graded_total }}</td>
+                            <td class="text-center text-success fw-semibold">{{ analysis_row.summary.M.pass_count }}</td>
+                            <td class="text-center text-success fw-semibold">{{ analysis_row.summary.M.pass_pct|floatformat:1 }}%</td>
+                            <td class="text-center text-danger fw-semibold">{{ analysis_row.summary.M.fail_count }}</td>
+                            <td class="text-center text-danger fw-semibold">{{ analysis_row.summary.M.fail_pct|floatformat:1 }}%</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-semibold">Girls</td>
+                            <td class="text-center">{{ analysis_row.summary.F.graded_total }}</td>
+                            <td class="text-center text-success fw-semibold">{{ analysis_row.summary.F.pass_count }}</td>
+                            <td class="text-center text-success fw-semibold">{{ analysis_row.summary.F.pass_pct|floatformat:1 }}%</td>
+                            <td class="text-center text-danger fw-semibold">{{ analysis_row.summary.F.fail_count }}</td>
+                            <td class="text-center text-danger fw-semibold">{{ analysis_row.summary.F.fail_pct|floatformat:1 }}%</td>
+                        </tr>
+                        <tr class="table-light">
+                            <td class="fw-semibold">Overall</td>
+                            <td class="text-center fw-semibold">{{ analysis_row.summary.TOTAL.graded_total }}</td>
+                            <td class="text-center text-success fw-semibold">{{ analysis_row.summary.TOTAL.pass_count }}</td>
+                            <td class="text-center text-success fw-semibold">{{ analysis_row.summary.TOTAL.pass_pct|floatformat:1 }}%</td>
+                            <td class="text-center text-danger fw-semibold">{{ analysis_row.summary.TOTAL.fail_count }}</td>
+                            <td class="text-center text-danger fw-semibold">{{ analysis_row.summary.TOTAL.fail_pct|floatformat:1 }}%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
+
+<div class="modal fade" id="analysisDelayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Preparing Analysis</h5>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">The system is <span id="analysis-delay-action">preparing the analysis</span>.</p>
+                <p class="mb-0 text-muted">This may take up to 2 minutes because the workbook has to be loaded and processed first.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.addEventListener('load', function () {
+        const links = Array.from(document.querySelectorAll('.analysis-delay-link'));
+        const modalEl = document.getElementById('analysisDelayModal');
+        const actionEl = document.getElementById('analysis-delay-action');
+
+        if (!links.length || !window.bootstrap || !modalEl) {
+            return;
+        }
+
+        const modal = new bootstrap.Modal(modalEl);
+
+        links.forEach(link => {
+            link.addEventListener('click', event => {
+                event.preventDefault();
+                if (actionEl) {
+                    actionEl.textContent = link.dataset.analysisAction || 'preparing the analysis';
+                }
+                modal.show();
+                window.setTimeout(() => {
+                    window.location.href = link.href;
+                }, 350);
+            });
+        });
+    });
+</script>
 {% endblock %}

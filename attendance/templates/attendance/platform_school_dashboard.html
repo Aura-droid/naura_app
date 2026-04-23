@@ -1,0 +1,199 @@
+{% extends "attendance/platform_base.html" %}
+
+{% block content %}
+<div class="container mt-4 pb-5">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <div class="badge bg-warning text-dark px-3 py-2 mb-3">N.D.I Super Admin</div>
+            <h2 class="fw-bold mb-1">Platform Admin Panel</h2>
+            <p class="text-muted mb-0">Register schools, manage their branding, create accounts, and control the full Naura Digital Initiative platform from one place.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if selected_school %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+                    Active School: {{ selected_school.display_name }}
+                </span>
+            {% endif %}
+            <a href="{% url 'school_directory' %}" class="btn btn-outline-primary">Open Public Portal</a>
+            <a href="{% url 'admin:index' %}" class="btn btn-outline-secondary">Django Admin Backup</a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} shadow-sm border-0">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="text-muted small text-uppercase fw-semibold mb-2">Registered Schools</div>
+                    <div class="display-6 fw-bold">{{ school_stats|length }}</div>
+                    <div class="small text-muted">All schools under the N.D.I platform.</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="text-muted small text-uppercase fw-semibold mb-2">School Accounts</div>
+                    <div class="display-6 fw-bold">{{ school_memberships|length }}</div>
+                    <div class="small text-muted">Accounts visible for the currently active school.</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="text-muted small text-uppercase fw-semibold mb-2">Admin Access</div>
+                    <div class="display-6 fw-bold">1</div>
+                    <div class="small text-muted">Dedicated super-admin workspace for N.D.I operations.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <h4 class="mb-3">Register New School</h4>
+                    <p class="text-muted small mb-3">Create a new school portal with its own name, logos, colors, support contacts, and banner.</p>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_school">
+                        <div class="row g-3">
+                            {% for field in school_form %}
+                                <div class="{% if field.name == 'notes' or field.name == 'default_classes' or field.name == 'name' or field.name == 'portal_name' or field.name == 'slogan' %}col-12{% else %}col-md-6{% endif %}">
+                                    <label class="form-label fw-semibold">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.help_text %}
+                                        <div class="form-text">{{ field.help_text }}</div>
+                                    {% endif %}
+                                    {% for error in field.errors %}
+                                        <div class="text-danger small">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-4 w-100">Create School</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h4 class="mb-3">Create School Account</h4>
+                    <p class="text-muted small mb-3">Create login credentials for headmaster, academic office, management, or teachers inside a selected school.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_account">
+                        <div class="row g-3">
+                            {% for field in account_form %}
+                                <div class="{% if field.name == 'school' or field.name == 'full_name' or field.name == 'username' or field.name == 'email' %}col-12{% else %}col-md-6{% endif %}">
+                                    <label class="form-label fw-semibold">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% for error in field.errors %}
+                                        <div class="text-danger small">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn btn-dark mt-4 w-100">Create Account</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h4 class="mb-3">Active School Team</h4>
+                    {% if selected_school %}
+                        <div class="mb-3 small text-muted">Showing accounts linked to {{ selected_school.display_name }}.</div>
+                    {% endif %}
+                    {% if school_memberships %}
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Role</th>
+                                        <th>Manage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for membership in school_memberships %}
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">{{ membership.user.get_full_name|default:membership.user.username }}</div>
+                                                <div class="small text-muted">{{ membership.user.username }}</div>
+                                            </td>
+                                            <td>{{ membership.get_role_display }}</td>
+                                            <td>{% if membership.can_manage_school %}Yes{% else %}No{% endif %}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No accounts have been linked to the active school yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-body p-4">
+            <h4 class="mb-3">Registered Schools</h4>
+            <p class="text-muted small mb-3">Switch the active school to preview that school’s portal and work inside its environment.</p>
+            {% if school_stats %}
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>School</th>
+                                <th>Status</th>
+                                <th>Accounts</th>
+                                <th>Templates</th>
+                                <th>Attendance Records</th>
+                                <th>Preview</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in school_stats %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">{{ item.school.display_name }}</div>
+                                        <div class="small text-muted">{{ item.school.initiative_name }} | {{ item.school.website_domain|default:"No domain yet" }}</div>
+                                    </td>
+                                    <td>
+                                        {% if item.school.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.member_count }}</td>
+                                    <td>{{ item.template_count }}</td>
+                                    <td>{{ item.attendance_count }}</td>
+                                    <td>
+                                        <a href="{% url 'switch_active_school' item.school.id %}?next={% url 'platform_school_dashboard' %}" class="btn btn-sm btn-outline-primary">
+                                            Switch To This School
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">No schools have been registered yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

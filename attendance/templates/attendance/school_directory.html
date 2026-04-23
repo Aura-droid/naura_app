@@ -1,0 +1,150 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naura Digital Initiative</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(180deg, #f5f8ff 0%, #eef3fb 100%);
+            color: #1f2937;
+        }
+        .hero {
+            position: relative;
+            color: white;
+            padding: 4rem 0 5rem;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(rgba(8, 23, 46, 0.58), rgba(8, 23, 46, 0.58)),
+                url("{% static 'assets/img/naura-banner.jpg' %}") center/cover no-repeat;
+        }
+        .hero > .container {
+            position: relative;
+            z-index: 1;
+        }
+        .chooser-shell {
+            margin-top: -2.5rem;
+        }
+        .brand-logo {
+            width: 82px;
+            height: 82px;
+            object-fit: contain;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.92);
+            padding: 0.5rem;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+        }
+        .school-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .school-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 1rem 2rem rgba(15, 23, 42, 0.12);
+        }
+        .school-logo {
+            width: 56px;
+            height: 56px;
+            object-fit: contain;
+            border-radius: 14px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            padding: 0.35rem;
+        }
+        .search-input {
+            border-radius: 999px;
+            padding: 0.9rem 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <section class="hero">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div class="d-flex align-items-start gap-3 flex-wrap">
+                    <img src="{% static 'assets/img/nauraicon.svg' %}" alt="Naura Digital Initiative" class="brand-logo">
+                    <div>
+                    <div class="badge bg-warning text-dark px-3 py-2 mb-3">N.D.I Platform</div>
+                    <h1 class="display-5 fw-bold mb-3">Choose Your School</h1>
+                    <p class="lead mb-0">Search your school, open its portal, then sign in with the account created for that school.</p>
+                    </div>
+                </div>
+                <div>
+                    <a href="{% url 'platform_school_dashboard' %}" class="btn btn-light text-primary fw-semibold">
+                        <i class="bi bi-shield-lock me-2"></i>Admin Entry
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container chooser-shell pb-5">
+        <div class="card border-0 shadow-lg rounded-4 mb-4">
+            <div class="card-body p-4">
+                <label for="school-search" class="form-label fw-semibold">Find school</label>
+                <input type="text" id="school-search" class="form-control search-input" placeholder="Type school name, portal name, or slogan">
+            </div>
+        </div>
+
+        <div class="row g-4" id="school-grid">
+            {% for school in schools %}
+                <div class="col-md-6 col-xl-4 school-item" data-search="{{ school.name|lower }} {{ school.display_name|lower }} {{ school.slogan|lower }}">
+                    <div class="card border-0 shadow-sm h-100 rounded-4 school-card">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                {% if school.logo_with_background %}
+                                    <img src="{{ school.logo_with_background.url }}" alt="{{ school.display_name }}" class="school-logo">
+                                {% else %}
+                                    <img src="{% static 'assets/img/md-favicon.jpg' %}" alt="{{ school.display_name }}" class="school-logo">
+                                {% endif %}
+                                <div>
+                                    <h4 class="mb-1 fw-bold">{{ school.display_name }}</h4>
+                                    <div class="text-muted small">{{ school.name }}</div>
+                                </div>
+                            </div>
+                            {% if school.slogan %}
+                                <p class="text-muted mb-3">{{ school.slogan }}</p>
+                            {% else %}
+                                <p class="text-muted mb-3">Digital school workspace under the Naura Digital Initiative platform.</p>
+                            {% endif %}
+                            <a href="{% url 'school_login' school.slug %}" class="btn btn-primary rounded-pill px-4">
+                                Open Login
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-body p-5 text-center text-muted">
+                            No schools are available yet.
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('school-search');
+            const schoolItems = Array.from(document.querySelectorAll('.school-item'));
+
+            searchInput.addEventListener('input', function () {
+                const term = (searchInput.value || '').trim().toLowerCase();
+                schoolItems.forEach(item => {
+                    const matches = !term || item.dataset.search.includes(term);
+                    item.style.display = matches ? '' : 'none';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

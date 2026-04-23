@@ -1,9 +1,10 @@
 import re
 from django import forms
+from django.contrib.auth.models import User
 from .models import AttendanceRecord
 from django.core.exceptions import ValidationError
 from .models import DailyTODReport
-from .models import ResultTemplate, ResultTemplateStatus
+from .models import ResultTemplate, ResultTemplateStatus, School, SchoolMembership, SchoolRole
 
 class AttendanceForm(forms.ModelForm):
     class Meta:
@@ -171,3 +172,105 @@ class ResultTemplateStatusForm(forms.Form):
         choices=ResultTemplateStatus.choices,
         widget=forms.Select(attrs={'class': 'form-select'}),
     )
+
+
+class SchoolForm(forms.ModelForm):
+    class Meta:
+        model = School
+        fields = [
+            'name',
+            'portal_name',
+            'slogan',
+            'initiative_name',
+            'initiative_short_name',
+            'logo_with_background',
+            'logo_without_background',
+            'banner_image',
+            'primary_color',
+            'secondary_color',
+            'accent_color',
+            'support_phone',
+            'support_email',
+            'physical_address',
+            'website_domain',
+            'default_classes',
+            'notes',
+            'is_active',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Example Secondary School'}),
+            'portal_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Example Digital'}),
+            'slogan': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Quality and Excellence'}),
+            'initiative_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'initiative_short_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. N.D.I'}),
+            'logo_with_background': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'logo_without_background': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'banner_image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'primary_color': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '#0d6efd'}),
+            'secondary_color': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '#0d3b66'}),
+            'accent_color': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '#ffc107'}),
+            'support_phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'support_email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'physical_address': forms.TextInput(attrs={'class': 'form-control'}),
+            'website_domain': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. school.example.com'}),
+            'default_classes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'FORM 1 A, FORM 1 B, FORM 2 A'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class SchoolAccountCreateForm(forms.Form):
+    school = forms.ModelChoiceField(
+        queryset=School.objects.none(),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    role = forms.ChoiceField(
+        choices=SchoolRole.choices,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    username = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    full_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    email = forms.EmailField(required=False, widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    password1 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+    password2 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+    job_title = forms.CharField(max_length=120, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    can_manage_school = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+
+    def __init__(self, *args, **kwargs):
+        school_queryset = kwargs.pop('school_queryset', School.objects.filter(is_active=True))
+        super().__init__(*args, **kwargs)
+        self.fields['school'].queryset = school_queryset
+
+    def clean_username(self):
+        username = self.cleaned_data['username'].strip()
+        if User.objects.filter(username=username).exists():
+            raise ValidationError("That username already exists.")
+        return username
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get('password1')
+        password2 = cleaned_data.get('password2')
+        if password1 and password2 and password1 != password2:
+            raise ValidationError("The two passwords do not match.")
+        return cleaned_data
+
+    def save(self):
+        school = self.cleaned_data['school']
+        full_name = self.cleaned_data['full_name'].strip()
+        first_name, _, last_name = full_name.partition(' ')
+        user = User.objects.create_user(
+            username=self.cleaned_data['username'],
+            email=self.cleaned_data.get('email', ''),
+            password=self.cleaned_data['password1'],
+            first_name=first_name,
+            last_name=last_name,
+        )
+        membership = SchoolMembership.objects.create(
+            school=school,
+            user=user,
+            role=self.cleaned_data['role'],
+            job_title=self.cleaned_data.get('job_title', ''),
+            can_manage_school=self.cleaned_data.get('can_manage_school', False),
+        )
+        return user, membership

@@ -1,6 +1,6 @@
-# Mwandet Digital User Manual
+# School Digital User Manual
 
-This guide explains how to use the Mwandet Digital system in simple language.
+This guide explains how to use the school digital system in simple language.
 
 It is written for:
 - Teachers
@@ -10,7 +10,7 @@ It is written for:
 
 ## 1. What This System Is For
 
-The Mwandet Digital system helps staff do school work online using a phone or computer.
+The school digital system helps staff do school work online using a phone or computer.
 
 Main uses:
 - Record class attendance

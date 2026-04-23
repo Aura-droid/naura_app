@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offline | Mwandet Digital</title>
+    <title>Offline | {{ school_display_name }}</title>
     <style>
         body {
             margin: 0;
@@ -65,7 +65,11 @@
 </head>
 <body>
     <div class="offline-card">
-        <img src="{% static 'assets/img/md-app-icon.png' %}" alt="MD icon">
+        {% if active_school and active_school.logo_without_background %}
+        <img src="{{ active_school.logo_without_background.url }}" alt="{{ school_display_name }} icon">
+        {% else %}
+        <img src="{% static 'assets/img/md-app-icon.png' %}" alt="{{ school_display_name }} icon">
+        {% endif %}
         <h1>You are offline</h1>
         <p>The portal cannot reach the internet right now. Check your connection, then try again.</p>
         <p>If you already installed the app, reopen it when the network comes back and continue working.</p>
