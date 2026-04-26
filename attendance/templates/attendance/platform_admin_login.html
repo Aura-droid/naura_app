@@ -1,0 +1,58 @@
+{% extends "attendance/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} - {{ platform_brand_name }}{% endblock %}
+
+{% block content %}
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+    <div class="card shadow-lg border-0 rounded-4" style="max-width: 400px; width: 100%;">
+        <div class="card-body p-5 text-center">
+            <!-- Platform Branding -->
+            <div class="mb-4">
+                <img src="{% static platform_brand_logo %}" alt="Logo" class="img-fluid mb-3" style="max-height: 80px;">
+                <h3 class="fw-bold text-primary">{{ platform_brand_short_name }} Admin</h3>
+                <p class="text-muted small">Platform Management Access</p>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show small" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3 text-start">
+                    <label for="{{ form.username.id_for_label }}" class="form-label text-muted small px-2">Username</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="text-danger x-small mt-1">{{ form.username.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-4 text-start">
+                    <label for="{{ form.password.id_for_label }}" class="form-label text-muted small px-2">Password</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <div class="text-danger x-small mt-1">{{ form.password.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg rounded-pill shadow-sm">
+                        Authenticate
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-4">
+                <a href="{% url 'school_directory' %}" class="text-decoration-none small text-secondary">← Back to Directory</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

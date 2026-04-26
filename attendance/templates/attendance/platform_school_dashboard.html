@@ -92,6 +92,11 @@
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="create_account">
+                        {% if account_form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ account_form.non_field_errors }}
+                            </div>
+                        {% endif %}
                         <div class="row g-3">
                             {% for field in account_form %}
                                 <div class="{% if field.name == 'school' or field.name == 'full_name' or field.name == 'username' or field.name == 'email' %}col-12{% else %}col-md-6{% endif %}">
@@ -121,7 +126,8 @@
                                     <tr>
                                         <th>User</th>
                                         <th>Role</th>
-                                        <th>Manage</th>
+                                        <th>Admin Privileges</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -132,7 +138,23 @@
                                                 <div class="small text-muted">{{ membership.user.username }}</div>
                                             </td>
                                             <td>{{ membership.get_role_display }}</td>
-                                            <td>{% if membership.can_manage_school %}Yes{% else %}No{% endif %}</td>
+                                            <td>
+                                                {% if membership.can_manage_school %}
+                                                    <span class="badge bg-info-subtle text-info">Can Manage</span>
+                                                {% else %}
+                                                    <span class="badge bg-light text-muted">View Only</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="d-flex gap-2">
+                                                    <a href="{% url 'edit_school_account' membership.id %}" class="btn btn-sm btn-outline-info" title="Edit Account">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Remove User" data-bs-toggle="modal" data-bs-target="#confirmActionModal" data-action-url="{% url 'remove_school_account' membership.id %}" data-message="Are you sure you want to remove '{{ membership.user.username }}' from {{ membership.school.display_name }}?" data-btn-class="btn-danger">
+                                                        <i class="bi bi-person-x"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
@@ -160,7 +182,8 @@
                                 <th>Accounts</th>
                                 <th>Templates</th>
                                 <th>Attendance Records</th>
-                                <th>Preview</th>
+                                <th>Switch Active</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -185,6 +208,29 @@
                                             Switch To This School
                                         </a>
                                     </td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <a href="{% url 'edit_school' item.school.id %}" class="btn btn-sm btn-outline-info" title="Edit School Details">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm {% if item.school.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}" 
+                                                    title="{% if item.school.is_active %}Deactivate School{% else %}Activate School{% endif %}"
+                                                    data-bs-toggle="modal" data-bs-target="#confirmActionModal"
+                                                    data-action-url="{% url 'toggle_school_active_status' item.school.id %}"
+                                                    data-message="Are you sure you want to {% if item.school.is_active %}deactivate{% else %}activate{% endif %} {{ item.school.display_name }}?"
+                                                    data-btn-class="{% if item.school.is_active %}btn-warning{% else %}btn-success{% endif %}">
+                                                <i class="bi {% if item.school.is_active %}bi-toggle-on{% else %}bi-toggle-off{% endif %}"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                    title="Delete School"
+                                                    data-bs-toggle="modal" data-bs-target="#confirmActionModal"
+                                                    data-action-url="{% url 'delete_school' item.school.id %}"
+                                                    data-message="Are you sure you want to permanently delete {{ item.school.display_name }}? All school data will be lost."
+                                                    data-btn-class="btn-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -196,4 +242,54 @@
         </div>
     </div>
 </div>
+
+<!-- Styled Confirmation Modal -->
+<div class="modal fade" id="confirmActionModal" tabindex="-1" aria-labelledby="confirmActionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="confirmActionModalLabel">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4">
+                <p id="confirmActionMessage" class="mb-0 text-muted fs-5"></p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                <form id="confirmActionForm" method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" id="confirmActionButton" class="btn px-4">Proceed</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmModal = document.getElementById('confirmActionModal');
+    if (confirmModal) {
+        confirmModal.addEventListener('show.bs.modal', function(event) {
+            // Button that triggered the modal
+            const button = event.relatedTarget;
+            
+            // Extract info from data attributes
+            const actionUrl = button.getAttribute('data-action-url');
+            const message = button.getAttribute('data-message');
+            const btnClass = button.getAttribute('data-btn-class') || 'btn-primary';
+
+            // Update modal content
+            const modalForm = confirmModal.querySelector('#confirmActionForm');
+            const modalMessage = confirmModal.querySelector('#confirmActionMessage');
+            const modalSubmitBtn = confirmModal.querySelector('#confirmActionButton');
+
+            modalForm.setAttribute('action', actionUrl);
+            modalMessage.textContent = message;
+            
+            // Apply the appropriate button class (danger/warning/etc)
+            modalSubmitBtn.className = 'btn px-4 ' + btnClass;
+        });
+    }
+});
+</script>
 {% endblock %}

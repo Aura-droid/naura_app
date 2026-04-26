@@ -150,11 +150,20 @@ def build_school_url_name(view_name):
 
 
 def school_reverse(view_name, school, **kwargs):
-    from django.urls import reverse
+    from django.urls import reverse, NoReverseMatch
 
     if not school:
         return None
-    return reverse(build_school_url_name(view_name), kwargs={'school_slug': school.slug, **kwargs})
+    
+    # Try the school-prefixed version first (multi-tenant friendly)
+    try:
+        return reverse(build_school_url_name(view_name), kwargs={'school_slug': school.slug, **kwargs})
+    except NoReverseMatch:
+        # Fallback to the global version if the prefixed one is not defined
+        try:
+            return reverse(view_name, kwargs=kwargs)
+        except NoReverseMatch:
+            return None
 
 
 def filter_for_school(queryset, school, field_name='school'):
@@ -567,6 +576,9 @@ def school_login(request, school_slug):
     form.fields['username'].widget.attrs.update({'class': 'form-control rounded-pill', 'autofocus': True})
     form.fields['password'].widget.attrs.update({'class': 'form-control rounded-pill'})
 
+    if request.user.is_authenticated:
+        return login_success_redirect(request)
+
     if request.method == 'POST' and form.is_valid():
         username = form.cleaned_data.get('username')
         password = form.cleaned_data.get('password')
@@ -595,22 +607,47 @@ def school_login(request, school_slug):
 
 
 def web_manifest(request):
-    active_school = get_active_school(request)
+    school_slug = request.GET.get('s')
+    active_school = None
+    
+    if school_slug:
+        active_school = School.objects.filter(slug=school_slug, is_active=True).first()
+    
+    if not active_school:
+        active_school = get_active_school(request)
+
     icon_src = (
         active_school.logo_without_background.url
         if active_school and active_school.logo_without_background
         else f"{settings.STATIC_URL}assets/img/md-app-icon.png"
     )
+    
+    # If we have a specific school, the PWA should land on its login page (which redirects to dashboard if already logged in)
+    if active_school:
+        start_url = f"/schools/{active_school.slug}/login/?source=pwa"
+        manifest_id = f"/school-{active_school.slug}"
+        name = active_school.display_name
+        short_name = active_school.display_name
+        description = f"{active_school.display_name} staff portal for attendance, TOD reports, and academic templates."
+        theme_color = active_school.primary_color or "#0d6efd"
+    else:
+        start_url = "/?source=md-pwa"
+        manifest_id = "/?app=md"
+        name = "School Digital"
+        short_name = "NDI Portal"
+        description = "Digital staff portal for attendance, TOD reports, and academic templates."
+        theme_color = "#0d6efd"
+
     manifest = {
-        "name": active_school.display_name if active_school else "School Digital",
-        "id": "/?app=md",
-        "short_name": active_school.display_name if active_school else "NDI Portal",
-        "start_url": "/?source=md-pwa",
+        "name": name,
+        "id": manifest_id,
+        "short_name": short_name,
+        "start_url": start_url,
         "scope": "/",
         "display": "standalone",
         "background_color": "#f8f9fa",
-        "theme_color": active_school.primary_color if active_school else "#0d6efd",
-        "description": f"{active_school.display_name if active_school else 'School Digital'} staff portal for attendance, TOD reports, and academic templates.",
+        "theme_color": theme_color,
+        "description": description,
         "icons": [
             {
                 "src": icon_src,
@@ -733,7 +770,36 @@ def login_success_redirect(request):
         """)
 
 
-@user_passes_test(is_platform_admin)
+def platform_admin_login(request):
+    """Branded login for platform administrators (superusers)."""
+    if request.user.is_authenticated and request.user.is_superuser:
+        return redirect('platform_school_dashboard')
+
+    if request.method == 'GET' and request.user.is_authenticated:
+        messages.info(request, "The account you are currently logged in with does not have platform administration access. Please log in as a Superuser.")
+
+    form = AuthenticationForm(request, data=request.POST or None)
+    # Apply styling consistent with your school login
+    form.fields['username'].widget.attrs.update({'class': 'form-control rounded-pill', 'autofocus': True})
+    form.fields['password'].widget.attrs.update({'class': 'form-control rounded-pill'})
+
+    if request.method == 'POST' and form.is_valid():
+        user = form.get_user()
+        if user.is_superuser:
+            login(request, user)
+            next_url = request.GET.get('next')
+            return redirect(next_url if next_url else 'platform_school_dashboard')
+        else:
+            messages.error(request, "Access denied. Only superuser accounts can access the platform management area.")
+    
+    return render(request, 'attendance/platform_admin_login.html', {
+        'form': form,
+        'use_platform_branding': True,
+        'title': 'Platform Administration'
+    })
+
+
+@user_passes_test(is_platform_admin, login_url='platform_admin_login')
 def platform_school_dashboard(request):
     schools = School.objects.prefetch_related('memberships__user').order_by('name')
     school_form = SchoolForm(prefix='school')
@@ -796,7 +862,75 @@ def platform_school_dashboard(request):
     )
 
 
-@user_passes_test(is_platform_admin)
+@user_passes_test(is_platform_admin, login_url='platform_admin_login')
+def edit_school(request, school_id):
+    """Allows platform admins to update school branding and settings."""
+    school = get_object_or_404(School, pk=school_id)
+    if request.method == 'POST':
+        form = SchoolForm(request.POST, request.FILES, instance=school)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Settings for {school.display_name} updated successfully.")
+            return redirect('platform_school_dashboard')
+    else:
+        form = SchoolForm(instance=school)
+    
+    return render(request, 'attendance/platform_school_form.html', {
+        'form': form,
+        'school': school,
+        'is_edit': True,
+        'use_platform_branding': True
+    })
+
+
+@user_passes_test(is_platform_admin, login_url='platform_admin_login')
+def edit_school_account(request, membership_id):
+    """Allows platform admins to change user roles or deactivate accounts."""
+    membership = get_object_or_404(SchoolMembership, pk=membership_id)
+    user = membership.user
+
+    if request.method == 'POST':
+        new_role = request.POST.get('role')
+        is_active = request.POST.get('is_active') == 'on'
+        new_password = request.POST.get('password')
+        
+        if new_role in SchoolRole.values:
+            membership.role = new_role
+            membership.save()
+            # Sync the Django Groups based on the new Portal Role
+            assign_membership_groups(user, new_role)
+        
+        user.is_active = is_active
+        if new_password:
+            user.set_password(new_password)
+        user.save()
+        
+        messages.success(request, f"Account '{user.username}' updated successfully.")
+        return redirect('platform_school_dashboard')
+
+    return render(request, 'attendance/platform_account_edit.html', {
+        'membership': membership,
+        'roles': SchoolRole.choices,
+        'use_platform_branding': True
+    })
+
+
+@user_passes_test(is_platform_admin, login_url='platform_admin_login')
+def remove_school_account(request, membership_id):
+    """Removes a user's membership from a school."""
+    if request.method != 'POST':
+        return redirect('platform_school_dashboard')
+        
+    membership = get_object_or_404(SchoolMembership, pk=membership_id)
+    username = membership.user.username
+    school_name = membership.school.display_name
+    
+    membership.delete()
+    messages.success(request, f"User '{username}' has been removed from {school_name}.")
+    return redirect('platform_school_dashboard')
+
+
+@user_passes_test(is_platform_admin, login_url='platform_admin_login')
 def switch_active_school(request, school_id):
     school = get_object_or_404(School, pk=school_id, is_active=True)
     request.session['active_school_id'] = school.id
@@ -805,6 +939,36 @@ def switch_active_school(request, school_id):
     if next_url:
         return redirect(next_url)
     return redirect(school_reverse('teacher_hub', school) or 'platform_school_dashboard')
+
+    
+
+
+@user_passes_test(is_platform_admin, login_url='platform_admin_login')
+def delete_school(request, school_id):
+    """Allows platform admins to delete a school."""
+    school = get_object_or_404(School, pk=school_id)
+    if request.method != 'POST':
+        return redirect('platform_school_dashboard')
+
+    school_name = school.display_name
+    school.delete()
+    messages.success(request, f"School '{school_name}' and all its associated data have been permanently deleted.")
+    return redirect('platform_school_dashboard')
+
+
+@user_passes_test(is_platform_admin, login_url='platform_admin_login')
+def toggle_school_active_status(request, school_id):
+    """Allows platform admins to toggle a school's active status."""
+    school = get_object_or_404(School, pk=school_id)
+    if request.method != 'POST':
+        return redirect('platform_school_dashboard')
+
+    school.is_active = not school.is_active
+    school.save()
+    status = "activated" if school.is_active else "deactivated"
+    messages.success(request, f"School '{school.display_name}' has been {status}.")
+    return redirect('platform_school_dashboard')
+
 
 @login_required
 def teacher_hub(request, school_slug=None):

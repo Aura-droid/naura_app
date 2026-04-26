@@ -1,0 +1,119 @@
+{% extends "attendance/base.html" %}
+{% block title %}{% if is_edit %}Edit {{ school.display_name }}{% else %}New School{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'platform_school_dashboard' %}">Platform Dashboard</a></li>
+                    <li class="breadcrumb-item active">{% if is_edit %}Edit School{% else %}Create School{% endif %}</li>
+                </ol>
+            </nav>
+
+            <div class="card shadow border-0 rounded-4">
+                <div class="card-header bg-white border-0 py-3 text-center">
+                    <h4 class="fw-bold mb-0 text-primary">
+                        {% if is_edit %}Update Branding: {{ school.display_name }}{% else %}Register New School{% endif %}
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small px-2">School Name</label>
+                                {{ form.name }}
+                                {{ form.name.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small px-2">Portal Display Name</label>
+                                {{ form.portal_name }}
+                                {{ form.portal_name.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small px-2">Initiative Name</label>
+                                {{ form.initiative_name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small px-2">Short Name</label>
+                                {{ form.initiative_short_name }}
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label text-muted small px-2">Slogan / Motto</label>
+                                {{ form.slogan }}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small px-2">Logo (Background)</label>
+                                {{ form.logo_with_background }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small px-2">Logo (Transparent)</label>
+                                {{ form.logo_without_background }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small px-2">Banner Image</label>
+                                {{ form.banner_image }}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small px-2">Primary Color</label>
+                                {{ form.primary_color }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small px-2">Secondary Color</label>
+                                {{ form.secondary_color }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small px-2">Accent Color</label>
+                                {{ form.accent_color }}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small px-2">Support Phone</label>
+                                {{ form.support_phone }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small px-2">Support Email</label>
+                                {{ form.support_email }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label text-muted small px-2">Physical Address</label>
+                                {{ form.physical_address }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label text-muted small px-2">Default Classes (Comma separated)</label>
+                                {{ form.default_classes }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small px-2">Website Domain</label>
+                                {{ form.website_domain }}
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end mb-3">
+                                <div class="form-check form-switch px-5">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label fw-bold" for="{{ form.is_active.id_for_label }}">Active Status</label>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <hr class="my-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a href="{% url 'platform_school_dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+                                    <button type="submit" class="btn btn-primary rounded-pill px-5 shadow-sm">
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

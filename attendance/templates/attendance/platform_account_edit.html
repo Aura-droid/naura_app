@@ -1,0 +1,118 @@
+{% extends "attendance/base.html" %}
+{% block title %}Edit Account: {{ membership.user.username }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'platform_school_dashboard' %}">Platform Dashboard</a></li>
+                    <li class="breadcrumb-item active">Edit Account</li>
+                </ol>
+            </nav>
+
+            <div class="card shadow border-0 rounded-4">
+                <div class="card-header bg-white border-0 py-4 text-center">
+                    <div class="avatar-placeholder bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <span class="fs-1 text-primary">{{ membership.user.username|make_list|first|upper }}</span>
+                    </div>
+                    <h4 class="fw-bold mb-1">{{ membership.user.get_full_name|default:membership.user.username }}</h4>
+                    <p class="text-muted small mb-0">{{ membership.school.display_name }} Account</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-muted small px-2">Access Role</label>
+                            <select name="role" class="form-select rounded-pill">
+                                {% for val, label in roles %}
+                                    <option value="{{ val }}" {% if membership.role == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text small px-2">Changing the role will automatically update their permissions/groups.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label text-muted small px-2">Reset Password</label>
+                            <input type="password" name="password" class="form-control rounded-pill" placeholder="Enter new password to reset">
+                            <div class="form-text small px-2">Leave blank if you do not want to change the password.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check form-switch p-3 bg-light rounded-3 d-flex justify-content-between align-items-center border">
+                                <label class="form-check-label fw-bold mb-0" for="is_active">
+                                    Account Status
+                                    <small class="d-block text-muted fw-normal">Toggle login access</small>
+                                </label>
+                                <input class="form-check-input" type="checkbox" role="switch" id="is_active" name="is_active" {% if membership.user.is_active %}checked{% endif %} style="width: 3em; height: 1.5em;">
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill shadow-sm">Update Account</button>
+                        </div>
+                    </form>
+
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-outline-danger btn-sm border-0 rounded-pill" 
+                                data-bs-toggle="modal" data-bs-target="#confirmActionModal" 
+                                data-action-url="{% url 'remove_school_account' membership.id %}" 
+                                data-message="Are you sure you want to remove this user from {{ membership.school.display_name }}? They will lose all access to this school portal." 
+                                data-btn-class="btn-danger">
+                            Remove from School
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Styled Confirmation Modal -->
+<div class="modal fade" id="confirmActionModal" tabindex="-1" aria-labelledby="confirmActionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="confirmActionModalLabel">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4">
+                <p id="confirmActionMessage" class="mb-0 text-muted fs-5"></p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                <form id="confirmActionForm" method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" id="confirmActionButton" class="btn px-4">Proceed</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmModal = document.getElementById('confirmActionModal');
+    if (confirmModal) {
+        confirmModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            
+            const actionUrl = button.getAttribute('data-action-url');
+            const message = button.getAttribute('data-message');
+            const btnClass = button.getAttribute('data-btn-class') || 'btn-primary';
+
+            const modalForm = confirmModal.querySelector('#confirmActionForm');
+            const modalMessage = confirmModal.querySelector('#confirmActionMessage');
+            const modalSubmitBtn = confirmModal.querySelector('#confirmActionButton');
+
+            modalForm.setAttribute('action', actionUrl);
+            modalMessage.textContent = message;
+            
+            modalSubmitBtn.className = 'btn px-4 ' + btnClass;
+        });
+    }
+});
+</script>
+{% endblock %}
